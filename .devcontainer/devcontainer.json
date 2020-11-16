@@ -1,0 +1,62 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+	"name": "ndscan",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined" ],
+	
+	// NOTE: If we want to map a drive we need to add extra permissions to the runArgs. E.g.:
+	// "runArgs": [ "--cap-add=SYS_PTRACE", "--cap-add=SYS_ADMIN", "--cap-add=DAC_READ_SEARCH", "--security-opt", "seccomp=unconfined" ],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": { 
+		// Use bash shell
+		"terminal.integrated.shell.linux": "/bin/bash",
+
+		// Set up Python environment
+		"python.pythonPath": "/miniconda/envs/devenv/bin/python",
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Enabled": true,
+		"python.linting.enabled": true,
+
+		// Unit test configuration
+		"python.testing.unittestArgs": [
+			"-v",
+			"-s",
+			"./test",
+			"-p",
+			"test_*.py"
+		],
+		"python.testing.pytestEnabled": false,
+		"python.testing.nosetestsEnabled": false,
+		"python.testing.unittestEnabled": true,
+
+		// Set the editor font
+		"editor.fontFamily": "Cascadia Code",
+		"editor.fontLigatures": true,
+		
+		// Hide configuration and cache files
+		"files.exclude": {
+			"**/.git": true,
+			".devcontainer": true,
+			".github": true,
+			".vscode": true,
+			"**/__pycache__": true
+		},
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"eamodio.toggle-excluded-files"
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+}
