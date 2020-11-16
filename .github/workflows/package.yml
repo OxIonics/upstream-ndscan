@@ -38,7 +38,7 @@ jobs:
           target_directories: ndscan test
 
       - name: Coding standard check (flake8)
-        uses: ./github-actions/unit_test
+        uses: ./github-actions/flake8
         with:
           target_directories: ndscan test
 
