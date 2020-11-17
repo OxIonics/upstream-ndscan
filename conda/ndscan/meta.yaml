@@ -12,6 +12,8 @@ build:
   script: python setup.py install
 
 requirements:
+  build:
+    - python >=3.8
   run:
     - python >=3.8
     - artiq
