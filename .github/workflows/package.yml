@@ -30,9 +30,8 @@ jobs:
       - name: Setup GitHub Actions base image
         uses: ./github-actions/setup_actions
 
-      # Environment for tests not yet setup - needs Artiq package
-      # - name: Run Unit Tests
-      #   uses: ./github-actions/unit_test
+      - name: Run Unit Tests
+        uses: ./github-actions/unit_test
 
       - name: Coding standard check (yapf)
         uses: ./github-actions/yapf
