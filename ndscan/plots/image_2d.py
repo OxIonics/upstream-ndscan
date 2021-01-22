@@ -4,7 +4,7 @@ from itertools import chain, repeat
 import logging
 import numpy as np
 import pyqtgraph
-from quamash import QtWidgets, QtCore
+from qasync import QtWidgets, QtCore
 from typing import Dict, Union
 
 from . import colormaps
@@ -30,7 +30,7 @@ def _calc_range_spec(preset_min, preset_max, preset_increment, data):
     else:
         # Only one point on this (i.e. all data so far is from one row/column), and no
         # way to infer what the increment is going to be. To be able to still display
-        # the data as it comes in, fall back on an arbitrary increment so far.
+        # the data as it comes in, fall back on an arbitrary increment for now.
         #
         # If we have lower/upper limits, we can at least try to guess a reasonable order
         # of magnitude.

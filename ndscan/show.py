@@ -6,17 +6,23 @@ from collections import OrderedDict
 import h5py
 import os
 import sys
-from quamash import QEventLoop, QtWidgets
+from oitg import results
+from qasync import QEventLoop, QtWidgets
 
 from .plots.container_widgets import MultiRootWidget, PlotContainerWidget
 from .plots.model import Context
 from .plots.model.hdf5 import HDF5Root
-from .utils import SCHEMA_REVISION_KEY, shorten_to_unambiguous_suffixes, strip_suffix
+from .results.tools import find_ndscan_roots
+from .utils import shorten_to_unambiguous_suffixes, strip_suffix
 
 
 def get_argparser():
     parser = argparse.ArgumentParser(
-        description="Displays ndscan plot from ARTIQ HDF5 results file")
+        description="Displays ndscan plot from ARTIQ HDF5 results file",
+        epilog=(
+            "Instead of a file name, just a run id or 'magic' source string can be "
+            "supplied, which is then resolved using oitg.results (e.g. 'alice_12345', "
+            "or just '12345' to infer the experiment name from the environment)."))
     parser.add_argument("--prefix",
                         default=None,
                         type=str,
@@ -35,14 +41,6 @@ def fetch_explicit_prefix(args):
     return prefix
 
 
-def find_ndscan_roots(datasets):
-    results = []
-    for name in datasets.keys():
-        if name.endswith("." + SCHEMA_REVISION_KEY):
-            results.append(strip_suffix(name, SCHEMA_REVISION_KEY))
-    return results
-
-
 def main():
     args = get_argparser().parse_args()
 
@@ -50,8 +48,20 @@ def main():
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
+    magic_spec = results.parse_magic(args.path)
+    if magic_spec is not None:
+        paths = results.find_results(day="auto", **magic_spec)
+        if len(paths) != 1:
+            QtWidgets.QMessageBox.critical(None, "Unable to resolve experiment path",
+                                           f"Could not resolve '{args.path}: {paths}'")
+            sys.exit(1)
+        print(paths)
+        path = next(iter(paths.values())).path
+    else:
+        path = args.path
+
     try:
-        file = h5py.File(args.path, "r")
+        file = h5py.File(path, "r")
     except Exception as e:
         QtWidgets.QMessageBox.critical(None, "Unable to load file", str(e))
         sys.exit(1)

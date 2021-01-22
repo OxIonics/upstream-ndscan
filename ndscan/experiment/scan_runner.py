@@ -9,7 +9,6 @@ will likely be used by end users via
 import numpy as np
 from artiq.coredevice.exceptions import RTIOUnderflow
 from artiq.language import *
-from contextlib import suppress
 from itertools import islice
 from typing import Any, Dict, List, Iterable, Iterator, Tuple
 from .default_analysis import AnnotationContext, DefaultAnalysis
@@ -23,16 +22,6 @@ __all__ = [
     "ScanAxis", "ScanSpec", "ScanRunner", "filter_default_analyses", "describe_scan",
     "describe_analyses"
 ]
-
-
-class ScanFinished(Exception):
-    """Used internally to signal that a scan has been successfully completed (points
-    exhausted).
-
-    This is a kludge to work around a bug where tuples of empty lists crash the ARTIQ
-    RPC code (kernel aborts), and should never be visible to the user.
-    """
-    pass
 
 
 class ScanAxis:
@@ -178,22 +167,26 @@ class ScanRunner(HasEnvironment):
                     axis.param_store.set_value)
         run_chunk = self._build_kscan_run_chunk(len(axes))
 
-        with suppress(ScanFinished):
-            self._kscan_update_host_param_stores()
-            while True:
-                try:
-                    self._kscan_fragment.host_setup()
-                    self._kscan_run_loop(run_chunk)
-                finally:
-                    self._kscan_fragment.host_cleanup()
-                self.core.comm.close()
-                self.scheduler.pause()
-                self._kscan_fragment.recompute_param_defaults()
+        self._kscan_update_host_param_stores()
+        while True:
+            try:
+                self._kscan_fragment.host_setup()
+                self._kscan_run_loop(run_chunk)
+                if self._kscan_is_out_of_points():
+                    # No more points; finished successfully.
+                    return
+            finally:
+                self._kscan_fragment.host_cleanup()
+            self.core.comm.close()
+            self.scheduler.pause()
+            self._kscan_fragment.recompute_param_defaults()
 
     def _build_kscan_run_chunk(self, num_axes):
         param_decl = " ".join("p{0},".format(idx) for idx in range(num_axes))
         code = ""
         code += "({}) = self._kscan_param_values_chunk()\n".format(param_decl)
+        code += "if not p0:\n"  # No more points
+        code += "    return True\n"
         code += "for i in range(len(p0)):\n"
         for idx in range(num_axes):
             code += "    self._kscan_param_setter_{0}(p{0}[i])\n".format(idx)
@@ -284,8 +277,6 @@ class ScanRunner(HasEnvironment):
                 # the regular (float) scans for integers until proper support for int
                 # scans is implemented.
                 values[i].append(axis.param_store.coerce(value))
-        if not values[0]:
-            raise ScanFinished
         return values
 
     @rpc(flags={"async"})
@@ -317,28 +308,47 @@ class ScanRunner(HasEnvironment):
         execute using the expected values.
         """
 
-        # Generate the next set of values if we are at a chunk boundary.
-        if not self._kscan_current_chunk:
-            try:
-                self._kscan_param_values_chunk()
-            except ScanFinished:
-                return
+        if self._kscan_is_out_of_points():
+            return
         # Set the host-side parameter stores.
         next_values = self._kscan_current_chunk[0]
         for value, axis in zip(next_values, self._kscan_axes):
             axis.param_store.set_value(value)
 
+    @host_only
+    def _kscan_is_out_of_points(self):
+        if self._kscan_current_chunk:
+            return False
+        # Current chunk is empty, but we might be at a chunk boundary.
+        self._kscan_param_values_chunk()
+        return not self._kscan_current_chunk
+
+
+def match_default_analysis(analysis: DefaultAnalysis, axes: Iterable[ScanAxis]) -> bool:
+    """Return whether the given default analysis can be executed for the given scan
+    axes.
+
+    The implementation is currently a bit more convoluted than necessary, as we want to
+    catch cases where the parameter specified by the analysis is scanned indirectly
+    through overrides. (TODO: Do we really, though? This matches the behaviour prior to
+    the refactoring towards exposing a set of required axis handles from
+    DefaultAnalysis, but we should revisit this.)
+    """
+    stores = set(a.param_store for a in axes)
+    assert None not in stores, "Can only match analyses after stores have been created"
+    return set(a._store for a in analysis.required_axes()) == stores
+
 
 def filter_default_analyses(fragment: ExpFragment,
                             axes: Iterable[ScanAxis]) -> List[DefaultAnalysis]:
     """Return the default analyses of the given fragment that can be executed for the
-    given scan spec."""
-    result = []
-    axis_identities = [(s.param_schema["fqn"], s.path) for s in axes]
-    for analysis in fragment.get_default_analyses():
-        if analysis.has_data(axis_identities):
-            result.append(analysis)
-    return result
+    given scan spec.
+
+    See :func:`match_default_analysis`.
+    """
+    ax = list(axes)  # Don't exhaust an arbitrary iterable.
+    return list(a for a in fragment.get_default_analyses()
+                if match_default_analysis(a, ax))
 
 
 def describe_scan(spec: ScanSpec, fragment: ExpFragment,

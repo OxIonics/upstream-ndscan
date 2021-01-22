@@ -94,6 +94,21 @@ class FragmentScanExperiment(EnvExperiment):
             param_stores.setdefault(fqn, []).append((ax.path, ax.param_store))
 
         self.fragment.init_params(param_stores)
+
+        for fqn, pairs in param_stores.items():
+            for path, store in pairs:
+                if not store._handles:
+                    # This isn't strictly problem; we could continue on just fine, or
+                    # make this just a warning. However, there is no reason for the user
+                    # to specify an override spec that will be silently ignored in the
+                    # first place, and failing loudly prevents any unnoticed issues if
+                    # the experiment code is modified for an already scheduled servo/
+                    # already open argument UI window/…
+                    raise ValueError(f"Override for '{fqn}' in path '{path}' did not " +
+                                     "match any parameters (likely due to changes " +
+                                     "since made to the experiment code; try " +
+                                     "Recompute All Arguments).")
+
         self.tlr = TopLevelRunner(self, self.fragment, spec, no_axes_mode,
                                   self.max_rtio_underflow_retries,
                                   self.max_transitory_error_retries)
@@ -118,13 +133,14 @@ class ArgumentInterface(HasEnvironment):
             fragment._collect_params(instances, self._schemata)
 
             for handle in fragment.get_always_shown_params():
+                path = handle.owner._stringize_path()
                 try:
                     param = handle.owner._free_params[handle.name]
+                    always_shown_params += [(param.fqn, path)]
                 except KeyError:
                     logger.warning(
                         "Parameter '%s' specified in get_always_shown_params()"
                         " is not a free parameter of fragment '%s'", handle.name, path)
-                always_shown_params += [(param.fqn, handle.owner._stringize_path())]
 
         desc = {
             "instances": instances,
@@ -160,7 +176,7 @@ class ArgumentInterface(HasEnvironment):
 
         generators = []
         axes = []
-        for axspec in scan["axes"]:
+        for axspec in scan.get("axes", []):
             generator_class = GENERATORS.get(axspec["type"], None)
             if not generator_class:
                 raise ScanSpecError("Axis type '{}' not implemented".format(
@@ -594,9 +610,9 @@ def run_fragment_once(
 
 def create_and_run_fragment_once(env: HasEnvironment,
                                  fragment_class: Type[ExpFragment],
+                                 *args,
                                  max_rtio_underflow_retries: int = 3,
                                  max_transitory_error_retries: int = 10,
-                                 *args,
                                  **kwargs) -> Dict[str, Any]:
     """Create an instance of the passed :class:`.ExpFragment` type and runs it once,
     returning the values pushed to any result channels.

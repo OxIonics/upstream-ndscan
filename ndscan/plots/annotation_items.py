@@ -1,10 +1,13 @@
-"""Plot annotations, which are rendered as one or more pyqtgraph graphics objects."""
+"""Plot annotations, which are rendered as one or more pyqtgraph graphics objects.
+
+This includes, for instance, fit curves and lines indicating fit results.
+"""
 
 import logging
 import numpy
 from oitg import uncertainty_to_string
 import pyqtgraph
-from quamash import QtCore
+from qasync import QtCore
 from typing import Dict, Union, Optional, Tuple
 from ..utils import FIT_OBJECTS
 from .model import AnnotationDataSource

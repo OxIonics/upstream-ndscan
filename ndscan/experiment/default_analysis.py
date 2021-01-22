@@ -17,7 +17,7 @@ Both can produce annotations; particular values or plot locations highlighted in
 user interface.
 """
 import logging
-from typing import Any, Callable, Dict, List, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Iterable, Optional, Set, Tuple, Union
 
 from ..utils import FIT_OBJECTS
 from .parameters import ParamHandle
@@ -117,13 +117,9 @@ class DefaultAnalysis:
     """Analysis functionality associated with an `ExpFragment` to be executed when that
     fragment is scanned in a particular way.
     """
-    def has_data(self, scanned_axes: List[AxisIdentity]) -> bool:
-        """Return whether the scanned axes contain the data necessary for this analysis
-        to be applicable.
-
-        :param scanned_axes: A list of axis identities being scanned over.
-        :return: Whether this analysis applies or not.
-        """
+    def required_axes(self) -> Set[ParamHandle]:
+        """Return the scan axes necessary for the analysis to apply, in form of the
+        parameter handles."""
         raise NotImplementedError
 
     def describe_online_analyses(
@@ -163,24 +159,37 @@ class DefaultAnalysis:
 
 class CustomAnalysis(DefaultAnalysis):
     r""":class:`DefaultAnalysis` that executes a user-defined analysis function in the
-    `execute()` step.
+    :meth:`execute` step.
 
     No analysis is run online.
 
     :param required_axes: List of parameters (given by their :class:`.ParamHandle`\ s)
         required to be scanend for the analysis to be applicable. (The order is not
         relevant.)
-    :param analyze_fn: The function to invoke in the analysis step. It is passed two
-        dictionaries giving list of axis/result channel values for each point of the
-        scan to analyse. The function can return a list of :class:`Annotation`\ s to be
-        broadcast.
+    :param analyze_fn: The function to invoke in the analysis step. It is passed three
+        dictionaries:
+
+            1. a map from parameter handles to lists of the respective values for each\
+               scan point,
+
+            2. a map from result channels to lists of results for each scan point,
+
+            3. channels for each of the optional analysis results specified in\
+               ``analysis_results``, given as a dictionary indexed by channel name.
+
+        For backwards-compatibility, the third parameter can be omitted. Optionally, a
+        list of annotations to broadcast can be returned.
+    :param analysis_results: Optionally, a number of result channels for analysis
+        results. They are later passed to ``analyze_fn``.
     """
     def __init__(
-            self,
-            required_axes: Iterable[ParamHandle],
-            analyze_fn: Callable[[Dict[ParamHandle, list], Dict[ResultChannel, list]],
-                                 Tuple[Dict[str, Any], List[Annotation]]],
-            analysis_results: Iterable[ResultChannel] = []):
+        self,
+        required_axes: Iterable[ParamHandle],
+        analyze_fn: Callable[[
+            Dict[ParamHandle, list], Dict[ResultChannel, list], Dict[str, ResultChannel]
+        ], Optional[List[Annotation]]],
+        analysis_results: Iterable[ResultChannel] = [],
+    ):
         self._required_axis_handles = set(required_axes)
         self._analyze_fn = analyze_fn
 
@@ -193,10 +202,9 @@ class CustomAnalysis(DefaultAnalysis):
                                  "' in analysis for axes '" + axes + "'")
             self._result_channels[name] = channel
 
-    def has_data(self, scanned_axes: List[AxisIdentity]) -> bool:
+    def required_axes(self) -> Set[ParamHandle]:
         ""
-        return set(h._store.identity
-                   for h in self._required_axis_handles) == set(scanned_axes)
+        return self._required_axis_handles
 
     def describe_online_analyses(
         self, context: AnnotationContext
@@ -327,17 +335,9 @@ class OnlineFit(DefaultAnalysis):
         self.constants = {} if constants is None else constants
         self.initial_values = {} if initial_values is None else initial_values
 
-    def has_data(self, scanned_axes: List[AxisIdentity]) -> bool:
+    def required_axes(self) -> Set[ParamHandle]:
         ""
-        num_axes = 0
-        for arg in self.data.values():
-            if isinstance(arg, ParamHandle):
-                num_axes += 1
-                if not arg._store:
-                    return False
-                if arg._store.identity not in scanned_axes:
-                    return False
-        return len(scanned_axes) == num_axes
+        return set(a for a in self.data.values() if isinstance(a, ParamHandle))
 
     def describe_online_analyses(
         self, context: AnnotationContext
