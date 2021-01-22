@@ -9,14 +9,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: Checkout GitHub Actions
         uses: actions/checkout@v2
         with:
           repository: OxIonics/github-actions
-          ref: v0.0.6
+          ref: v0.0.8
           token: ${{ secrets.OXIONICS_GITHUB_TOKEN }}
           path: github-actions
 
@@ -53,12 +51,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Checkout GitHub Actions
         uses: actions/checkout@v2
         with:
           repository: OxIonics/github-actions
-          ref: v0.0.6
+          ref: v0.0.8
           token: ${{ secrets.OXIONICS_GITHUB_TOKEN }}
           path: github-actions
 
@@ -68,9 +68,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-
-      - name: Setup GitHub Actions base image
-        uses: ./github-actions/setup_actions
 
       - name: Build Conda package
         uses: ./github-actions/conda_build
