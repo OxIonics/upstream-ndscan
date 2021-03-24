@@ -19,6 +19,8 @@
 		"python.linting.pylintEnabled": false,
 		"python.linting.flake8Enabled": true,
 		"python.linting.enabled": true,
+		"python.formatting.provider": "yapf",
+		"python.languageServer": "Pylance",
 
 		// Unit test configuration
 		"python.testing.unittestArgs": [
@@ -31,6 +33,9 @@
 		"python.testing.pytestEnabled": false,
 		"python.testing.nosetestsEnabled": false,
 		"python.testing.unittestEnabled": true,
+
+		// Don't ask to trust Jupyter notebook
+		"jupyter.alwaysTrustNotebooks": true,
 
 		// Set the editor font
 		"editor.fontFamily": "Cascadia Code",
@@ -48,12 +53,13 @@
 
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
-		"ms-python.python",
-		"eamodio.toggle-excluded-files"
+		"ms-python.vscode-pylance",
+		"eamodio.toggle-excluded-files",
+		"ms-vscode.hexeditor"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [],
+	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 
