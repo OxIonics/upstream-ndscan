@@ -1,3 +1,2 @@
 # Grab development environment from GitHub Docker Registry
-FROM ghcr.io/oxionics/hello_world_devenv:0.0.7
-RUN conda install artiq oitg
+FROM ghcr.io/oxionics/devenv-user:0.0.6
