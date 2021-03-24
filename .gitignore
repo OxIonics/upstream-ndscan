@@ -4,3 +4,6 @@ __pycache__
 /*.egg-info
 /.idea
 /.vscode
+
+# Source directory for additional Git checkouts
+src/
