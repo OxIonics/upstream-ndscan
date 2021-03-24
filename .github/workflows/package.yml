@@ -4,49 +4,28 @@ on: [push]
 
 jobs:
   test:    
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Unit Tests
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Checkout GitHub Actions
-        uses: actions/checkout@v2
-        with:
-          repository: OxIonics/github-actions
-          ref: v0.0.8
-          token: ${{ secrets.OXIONICS_GITHUB_TOKEN }}
-          path: github-actions
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Setup GitHub Actions base image
-        uses: ./github-actions/setup_actions
-
-      - name: Run Unit Tests
-        uses: ./github-actions/unit_test
-
-      - name: Coding standard check (yapf)
-        uses: ./github-actions/yapf
-        with:
-          target_directories: ndscan test
-
-      - name: Coding standard check (flake8)
-        uses: ./github-actions/flake8
-        with:
-          target_directories: ndscan test
+      - name: Test
+        run: |
+          TAG=hw-description-$(uuidgen) # Add a GUID to prevent clashes
+          docker build .devcontainer --tag $TAG
+          docker run --rm \
+            -v `pwd`:/workspace \
+            -w /workspace \
+            $TAG \
+            ./test.sh
 
   package_job:
 
     # Only run if the tests pass
     needs: test
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, conda-feed]
     name: Conda Packaging
     steps:
       - name: Checkout
@@ -54,36 +33,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout GitHub Actions
-        uses: actions/checkout@v2
-        with:
-          repository: OxIonics/github-actions
-          ref: v0.0.8
-          token: ${{ secrets.OXIONICS_GITHUB_TOKEN }}
-          path: github-actions
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Build Conda package
-        uses: ./github-actions/conda_build
-        id: conda_build
-        with:
-          name: ndscan
-
-      - name: Store package as a Workflow Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ steps.conda_build.outputs.package-name }}
-          path: ${{ steps.conda_build.outputs.package-path }}
-
-      - name: Publish the package
-        uses: ./github-actions/conda_publish
-        with:
-          path: ${{ steps.conda_build.outputs.package-path }}
-          architecture: noarch
-          key: ${{ secrets.STORAGE_ACCOUNT_KEY }}
+      - name: Publish
+        run: |
+          /home/buildbot/conda-feed/publish.sh \
+            ${{ secrets.STORAGE_ACCOUNT_KEY }} \
+            `pwd` \
+            ndscan
