@@ -35,7 +35,7 @@ jobs:
 
       - name: Publish
         run: |
-          /home/buildbot/conda-feed/publish.sh \
+          ${{ secrets.CONDA_SCRIPTS_DIR }}/publish.sh \
             ${{ secrets.STORAGE_ACCOUNT_KEY }} \
             `pwd` \
             ndscan
