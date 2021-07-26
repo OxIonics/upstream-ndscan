@@ -20,7 +20,7 @@ jobs:
             $TAG \
             ./test.sh
 
-  package_job:
+  package_ndscan:
 
     # Only run if the tests pass
     needs: test
@@ -33,9 +33,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Publish
+      - name: Publish (ndscan)
         run: |
           ${{ secrets.CONDA_SCRIPTS_DIR }}/publish.sh \
             ${{ secrets.STORAGE_ACCOUNT_KEY }} \
             `pwd` \
             ndscan
+
+  package_dashboard:
+
+    # Only run if the tests pass
+    needs: test
+
+    runs-on: [self-hosted, conda-feed]
+    name: Conda Packaging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Publish (ndscan-dashboard)
+        run: |
+          ${{ secrets.CONDA_SCRIPTS_DIR }}/publish.sh \
+            ${{ secrets.STORAGE_ACCOUNT_KEY }} \
+            `pwd` \
+            ndscan-dashboard
