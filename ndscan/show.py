@@ -7,11 +7,13 @@ import h5py
 import os
 import sys
 from oitg import results
+from sipyco import pyon
 from qasync import QEventLoop, QtWidgets
 
 from .plots.container_widgets import MultiRootWidget, PlotContainerWidget
 from .plots.model import Context
 from .plots.model.hdf5 import HDF5Root
+from .results.arguments import extract_param_schema, summarise
 from .results.tools import find_ndscan_roots
 from .utils import shorten_to_unambiguous_suffixes, strip_suffix
 
@@ -55,7 +57,6 @@ def main():
             QtWidgets.QMessageBox.critical(None, "Unable to resolve experiment path",
                                            f"Could not resolve '{args.path}: {paths}'")
             sys.exit(1)
-        print(paths)
         path = next(iter(paths.values())).path
     else:
         path = args.path
@@ -97,13 +98,27 @@ def main():
             sys.exit(1)
 
     try:
+        schema = extract_param_schema(pyon.decode(file["expid"][()])["arguments"])
+    except Exception as e:
+        print("No ndscan parameter arguments found:", e)
+        schema = None
+
+    if schema is not None:
+        print(summarise(schema))
+
+    try:
         context = Context()
         context.set_title(os.path.basename(args.path))
 
         # Take source_id from first prefix. This is pretty arbitrary, but for
         # experiment-generated files, they will all be the same anyway.
         if (prefixes[0] + "source_id") in datasets:
-            context.set_source_id(datasets[prefixes[0] + "source_id"][()])
+            source = datasets[prefixes[0] + "source_id"][()]
+            if isinstance(source, bytes):
+                # h5py 3+ – can use datasets[…].asstr() as soon as we don't support
+                # version 2 any longer.
+                source = source.decode("utf-8")
+            context.set_source_id(source)
         else:
             # Old ndscan versions had a rid dataset instead of source_id.
             context.set_source_id("rid_{}".format(datasets[prefixes[0] + "rid"][()]))
@@ -123,7 +138,7 @@ def main():
         widget = MultiRootWidget(
             OrderedDict(zip((strip_suffix(label_map[p], ".") for p in prefixes),
                             roots)), context)
-
+    widget.setWindowTitle(f"{context.get_title()} – ndscan.show")
     widget.show()
     widget.resize(800, 600)
     sys.exit(app.exec_())
