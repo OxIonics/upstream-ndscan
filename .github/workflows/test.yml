@@ -15,5 +15,7 @@ jobs:
         run: |
           git config --global url."https://oxionics:${{ secrets.GHA_TOKEN }}@github.com".insteadOf ssh://git@github.com
           python -m pip install poetry==1.1.12
+          apt update
+          apt install -y libgl-dev
           poetry install
           poetry run pytest
