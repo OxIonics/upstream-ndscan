@@ -1,0 +1,21 @@
+name: Test
+
+on: [push, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: self-hosted
+    container: python:3.8-bullseye
+    name: Unit Tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: |
+          git config --global url."https://oxionics:${{ secrets.GHA_TOKEN }}@github.com".insteadOf ssh://git@github.com
+          python -m pip install poetry==1.1.12
+          apt update
+          apt install -y libgl-dev
+          poetry install
+          poetry run pytest

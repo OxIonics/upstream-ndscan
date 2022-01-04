@@ -1,61 +1,38 @@
 name: Package
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  pull_request:
 
 jobs:
-  test:    
+  build_and_upload_wheel:
+    name: Build and upload wheel
+    container: python:3.8-bullseye
     runs-on: self-hosted
-    name: Unit Tests
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Test
-        run: |
-          TAG=hw-description-$(uuidgen) # Add a GUID to prevent clashes
-          docker build .devcontainer --tag $TAG
-          docker run --rm \
-            -v `pwd`:/workspace \
-            -w /workspace \
-            $TAG \
-            ./test.sh
-
-  package_ndscan:
-
-    # Only run if the tests pass
-    needs: test
-
-    runs-on: [self-hosted, conda-feed]
-    name: Conda Packaging
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Publish (ndscan)
+      - name: Install poetry
         run: |
-          ${{ secrets.CONDA_SCRIPTS_DIR }}/publish.sh \
-            ${{ secrets.STORAGE_ACCOUNT_KEY }} \
-            `pwd` \
-            ndscan
+          python -m pip install poetry==1.1.12
+          python -m pip install poetry-dynamic-versioning==0.13.1
 
-  package_dashboard:
+      - name: Build wheel
+        run: poetry build -f wheel
 
-    # Only run if the tests pass
-    needs: test
-
-    runs-on: [self-hosted, conda-feed]
-    name: Conda Packaging
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Publish (ndscan-dashboard)
+      - name: Configure poetry
+        if: github.event_name == 'push'
         run: |
-          ${{ secrets.CONDA_SCRIPTS_DIR }}/publish.sh \
-            ${{ secrets.STORAGE_ACCOUNT_KEY }} \
-            `pwd` \
-            ndscan-dashboard
+          poetry config repositories.oxionics ${{ secrets.PYPI_SERVER }}
+          poetry config http-basic.oxionics \
+            ${{ secrets.PYPI_LOGIN }} ${{ secrets.PYPI_PASSWORD }}
+
+      - name: Upload wheel
+        if: github.event_name == 'push'
+        run: poetry publish -r oxionics

@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "ndscan"
+version = "0.2.0"
+description = "Composable experiment fragments and multidimensional scans for ARTIQ"
+authors = ["David Nadlinger"]
+license = "LGPLv3+"
+
+[[tool.poetry.source]]
+name = "oxionics"
+url = "http://pypi.oxionics.com:3141/oiuser/oxionics/+simple/"
+default = true
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.10"
+sipyco = "^1.2.42"
+h5py = "^3.6.0"
+artiq = "^7.7907+gd3e80f48"
+pyqtgraph = "^0.12.3"
+qasync = "^0.22.0"
+oitg = "^0.2.90"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+format-jinja = "{{ base }}.{{ distance }}+g{{ commit }}"
+pattern = "^(?P<base>\\d+(\\.\\d+)*)"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+build-backend = "poetry.core.masonry.api"
