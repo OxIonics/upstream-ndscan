@@ -11,7 +11,7 @@ url = "http://pypi.oxionics.com:3141/oiuser/oxionics/+simple/"
 default = true
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.10"
+python = "~3.8"
 sipyco = "^1.2.42"
 h5py = "^3.6.0"
 artiq = "^7.0"
