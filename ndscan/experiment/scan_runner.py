@@ -118,6 +118,7 @@ class ScanRunner(HasEnvironment):
                     fragment.device_cleanup()
             finally:
                 fragment.host_cleanup()
+            self.core.comm.close()
             self.scheduler.pause()
             fragment.recompute_param_defaults()
 
