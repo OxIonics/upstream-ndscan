@@ -2,7 +2,7 @@ from artiq.language import *
 from collections import OrderedDict
 from copy import deepcopy
 import logging
-from typing import Any, Dict, List, Iterable, Type, Tuple, Union
+from typing import Any, Dict, List, Iterable, Type, Tuple, Union, Optional
 
 from .default_analysis import DefaultAnalysis
 from .parameters import ParamHandle, ParamStore
@@ -314,6 +314,87 @@ class Fragment(HasEnvironment):
         setattr(self, name, handle)
         return handle
 
+    def setattr_param_like(self,
+                           like: ParamHandle,
+                           name: Optional[str] = None,
+                           **kwargs) -> ParamHandle:
+        """Create a new parameter using an existing parameter as a template. This is
+        typically combined with :meth bind_param: to rebind parameters from one or more
+        subfragments.
+
+        Can only be called during :meth:`build_fragment`.
+
+        :param like: Handle to the parameter to be used as a template. The newly created
+            parameter will inherent all metadata from the template parameter that is not
+            overridden by kwargs. `like` must be a free parameter (not overridden or
+            bound to another parameter).
+        :param name: The new parameter's name, to be part of its FQN. If specified, the
+            name must be a valid Python identifier. If `None` the name is inherited from
+            the template parameter. The parameter handle will be accessible as
+            ``self.<name>``.
+        :param kwargs: Any attributes to override in the template parameter metadata.
+        :return: The newly created parameter handle.
+        """
+        assert self._building, ("Can only call setattr_param_like() during "
+                                "build_fragment()")
+
+        name = name if name is not None else like.name
+        assert name.isidentifier(), "Parameter name must be valid Python identifier"
+        assert not hasattr(self, name), "Field '{}' already exists".format(name)
+        assert like.name in like.owner._free_params, (
+            f"'{like.name}' is not a free parameter (already rebound/overridden?)")
+
+        template_param = like.owner._free_params[like.name]
+        new_param = deepcopy(template_param)
+        new_param.fqn = self.fqn + "." + name
+        for k, v in kwargs.items():
+            setattr(param, k, v)
+        self._free_params[name] = new_param
+        new_handle = new_param.HandleType(self, name)
+        setattr(self, name, new_handle)
+        return new_handle
+
+    def bind_param(self, param_name: str, bound_param_owner: Fragment,
+                   bound_param_name: Optional[str]) -> None:
+        """Override the value of a subfragment parameter to follow one of this
+        fragment's parameters.
+
+        The most common use case for this is to specialise the operation of a generic
+        subfragment. For example, there might be a fragment ``Fluoresce`` that drives
+        a cycling transition in an ion with parameters for intensity and detuning.
+        Higher-level fragments for Doppler cooling, readout, etc. might then use
+        ``Fluoresce``, binding its intensity and detuning parameters to values and
+        defaults appropriate for those particular tasks.
+
+        Can only be called during :meth:`build_fragment`.
+
+        :param param_name: The name of the driving parameter (i.e.
+            ``self.<param_name>``). Must be a free parameter of this fragment (not
+            already bound or overridden).
+        :param bound_param_owner: The fragment owning the parameter to bind to
+            ``self.<param_name>``.
+        :param bound_param_name: The name of the bound parameter (i.e.
+            ``<bound_param_owner>.<bound_param_name>``). If ``None``, defaults to
+            ``param_name``. Must be a free parameter.
+        """
+        assert self._building, "Can only call bind_param() during build_fragment()"
+        assert param_name.isidentifier(), \
+            "Parameter name must be valid Python identifier"
+        assert hasattr(self, param_name), f"No attribute '{param_name}'"
+
+        bound_param_name = bound_param_name if bound_param_name else param_name
+        assert hasattr(bound_param_owner, bound_param_name), \
+            f"'{bound_param_name}' is not a field of `bound_param_owner`"
+        assert bound_param_name in bound_param_owner._free_params, (
+            f"'{param_name}' is not a free parameter of `bound_param_owner` "
+            "(already rebound/overridden?)")
+
+        handles = self._rebound_subfragment_params.get(param_name, [])
+        handles += bound_param_owner._get_all_handles_for_param(bound_param_name)
+        self._rebound_subfragment_params[param_name] = handles
+
+        del bound_param_owner._free_params[bound_param_name]
+
     def setattr_param_rebind(self,
                              name: str,
                              original_owner: "Fragment",
@@ -617,6 +698,24 @@ class ExpFragment(Fragment):
         This is a class method in spirit, and might become one in the future.
         """
         return []
+
+
+class ExpCollectionFragment(ExpFragment):
+    def build_fragment(self, exp_fragments: List[Fragment]):
+        self._exp_fragments = exp_fragments
+
+    @kernel  # should this be a kernel?
+    def run_once(self):
+        for exp in self._exp_fragments:
+            exp.run_once()
+
+    def get_default_analyses(self):
+        analyses = []
+        for exp in self._exp_fragments:
+            exp_analyses = exp.get_default_analyses()
+            prefix = exp._fragment_path[-1]
+            analyses += [AnalysisProxy(analysis, prefix) for analysis in exp_analyses]
+        return exp_analyses
 
 
 class TransitoryError(Exception):

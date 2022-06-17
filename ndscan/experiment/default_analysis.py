@@ -412,3 +412,29 @@ class OnlineFit(DefaultAnalysis):
         ""
         # Nothing to do off-line for online fits.
         return []
+
+
+class AnalysisProxy:
+    def __init__(self, analysis, path_prefix):
+        self._analysis = analysis
+        self._path_prefix = path_prefix
+
+    def required_axes(self) -> Set[ParamHandle]:
+        return self._analysis.required_axes()
+
+    def describe_online_analyses(
+        self, context: AnnotationContext
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+        return self._analysis.describe_online_analyses(context)
+
+    def get_analysis_results(self) -> Dict[str, ResultChannel]:
+        results = self._analysis.get_analysis_results()
+        return {self._path_prefix + k for k, v in results.items()}
+
+    def execute(
+        self,
+        axis_data: Dict[AxisIdentity, list],
+        result_data: Dict[ResultChannel, list],
+        context: AnnotationContext,
+    ) -> List[Dict[str, Any]]:
+        return self._analysis.execute(axis_data, result_data, context)
