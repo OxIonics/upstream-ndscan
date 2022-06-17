@@ -21,6 +21,7 @@ oitg = "^0.2.90"
 pyqt5 = "^5.15.6"
 pyqt5-qt5 = "^5.15.2"
 pyqt5-sip = "^12.10.1"
+opentelemetry-api = "^1.11.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

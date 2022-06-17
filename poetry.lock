@@ -618,7 +618,7 @@ reference = "oxionics"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.8"
-content-hash = "d2f788a25f720e277e68def4d7ce0aef181c0f0193f2580948b69ad62982cc44"
+content-hash = "0db8fbdc8ae9d5c586ec467f51df8bcb1bc4ee1675e786d60b432776a0a5578a"
 
 [metadata.files]
 artiq = [

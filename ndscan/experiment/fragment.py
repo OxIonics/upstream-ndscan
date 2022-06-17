@@ -4,6 +4,8 @@ from copy import deepcopy
 import logging
 from typing import Any, Dict, List, Iterable, Type, Tuple, Union
 
+from opentelemetry import trace
+
 from .default_analysis import DefaultAnalysis
 from .parameters import ParamHandle, ParamStore
 from .result_channels import ResultChannel, FloatChannel
@@ -57,41 +59,45 @@ class Fragment(HasEnvironment):
 
         klass = self.__class__
         mod = klass.__module__
-        # KLUDGE: Strip prefix added by file_import() to make path matches compatible
-        # across dashboard/artiq_run and the worker running the experiment. Should be
-        # fixed at the source.
-        for f in ["artiq_run_", "artiq_worker_", "file_import_"]:
-            mod = strip_prefix(mod, f)
-        self.fqn = mod + "." + klass.__qualname__
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("build_fragment", attributes={
+            "class_name": klass.__qualname__,
+        }):
+            # KLUDGE: Strip prefix added by file_import() to make path matches compatible
+            # across dashboard/artiq_run and the worker running the experiment. Should be
+            # fixed at the source.
+            for f in ["artiq_run_", "artiq_worker_", "file_import_"]:
+                mod = strip_prefix(mod, f)
+            self.fqn = mod + "." + klass.__qualname__
 
-        # Mangle the arguments into the FQN, so they can be used to parametrise
-        # the parameter definitions.
-        # TODO: Also handle kwargs, make sure this generates valid identifiers.
-        for a in args:
-            self.fqn += "_"
-            self.fqn += str(a)
+            # Mangle the arguments into the FQN, so they can be used to parametrise
+            # the parameter definitions.
+            # TODO: Also handle kwargs, make sure this generates valid identifiers.
+            for a in args:
+                self.fqn += "_"
+                self.fqn += str(a)
 
-        self._building = True
-        self.build_fragment(*args, **kwargs)
-        self._building = False
+            self._building = True
+            self.build_fragment(*args, **kwargs)
+            self._building = False
 
-        # Now that we know all subfragments, synthesise code for device_setup() and
-        # device_cleanup() to forward to subfragments.
-        self._device_setup_subfragments_impl = kernel_from_string(["self"], "\n".join([
-            "self.{}.device_setup()".format(s._fragment_path[-1])
-            for s in self._subfragments
-        ]) or "pass", portable)
+            # Now that we know all subfragments, synthesise code for device_setup() and
+            # device_cleanup() to forward to subfragments.
+            self._device_setup_subfragments_impl = kernel_from_string(["self"], "\n".join([
+                "self.{}.device_setup()".format(s._fragment_path[-1])
+                for s in self._subfragments
+            ]) or "pass", portable)
 
-        code = ""
-        for s in self._subfragments[::-1]:
-            frag = "self." + s._fragment_path[-1]
-            code += "try:\n"
-            code += "    {}.device_cleanup()\n".format(frag)
-            code += "except Exception:\n"
-            code += "    logger.error(\"Cleanup failed for '{}'.\")\n".format(
-                s._stringize_path())
-        self._device_cleanup_subfragments_impl = kernel_from_string(
-            ["self", "logger"], code[:-1] if code else "pass", portable)
+            code = ""
+            for s in self._subfragments[::-1]:
+                frag = "self." + s._fragment_path[-1]
+                code += "try:\n"
+                code += "    {}.device_cleanup()\n".format(frag)
+                code += "except Exception:\n"
+                code += "    logger.error(\"Cleanup failed for '{}'.\")\n".format(
+                    s._stringize_path())
+            self._device_cleanup_subfragments_impl = kernel_from_string(
+                ["self", "logger"], code[:-1] if code else "pass", portable)
 
     def host_setup(self):
         """Perform host-side initialisation.
