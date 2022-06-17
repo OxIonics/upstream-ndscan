@@ -23,7 +23,8 @@ from ..utils import FIT_OBJECTS
 from .parameters import ParamHandle
 from .result_channels import ResultChannel
 
-__all__ = ["Annotation", "DefaultAnalysis", "CustomAnalysis", "OnlineFit"]
+__all__ = ["Annotation", "DefaultAnalysis", "CustomAnalysis", "OnlineFit",
+           "AnalysisProxy"]
 
 logger = logging.getLogger(__name__)
 
@@ -414,7 +415,7 @@ class OnlineFit(DefaultAnalysis):
         return []
 
 
-class AnalysisProxy:
+class AnalysisProxy(DefaultAnalysis):
     def __init__(self, analysis, path_prefix):
         self._analysis = analysis
         self._path_prefix = path_prefix
@@ -429,7 +430,7 @@ class AnalysisProxy:
 
     def get_analysis_results(self) -> Dict[str, ResultChannel]:
         results = self._analysis.get_analysis_results()
-        return {self._path_prefix + k for k, v in results.items()}
+        return {self._path_prefix + k: v for k, v in results.items()}
 
     def execute(
         self,

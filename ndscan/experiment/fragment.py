@@ -1,16 +1,19 @@
+from __future__ import annotations  # PEP 536 for python < 3.10
+
 from artiq.language import *
 from collections import OrderedDict
 from copy import deepcopy
 import logging
 from typing import Any, Dict, List, Iterable, Type, Tuple, Union, Optional
 
-from .default_analysis import DefaultAnalysis
+from .default_analysis import DefaultAnalysis, AnalysisProxy
 from .parameters import ParamHandle, ParamStore
 from .result_channels import ResultChannel, FloatChannel
 from .utils import path_matches_spec
 from ..utils import strip_prefix
 
-__all__ = ["Fragment", "ExpFragment", "TransitoryError", "RestartKernelTransitoryError"]
+__all__ = ["Fragment", "ExpFragment", "ExpCollectionFragment", "TransitoryError",
+           "RestartKernelTransitoryError"]
 
 logger = logging.getLogger(__name__)
 
@@ -355,7 +358,7 @@ class Fragment(HasEnvironment):
         return new_handle
 
     def bind_param(self, param_name: str, bound_param_owner: Fragment,
-                   bound_param_name: Optional[str]) -> None:
+                   bound_param_name: Optional[str]=None) -> None:
         """Override the value of a subfragment parameter to follow one of this
         fragment's parameters.
 
@@ -704,7 +707,6 @@ class ExpCollectionFragment(ExpFragment):
     def build_fragment(self, exp_fragments: List[Fragment]):
         self._exp_fragments = exp_fragments
 
-    @kernel  # should this be a kernel?
     def run_once(self):
         for exp in self._exp_fragments:
             exp.run_once()
@@ -715,7 +717,8 @@ class ExpCollectionFragment(ExpFragment):
             exp_analyses = exp.get_default_analyses()
             prefix = exp._fragment_path[-1]
             analyses += [AnalysisProxy(analysis, prefix) for analysis in exp_analyses]
-        return exp_analyses
+        print(type(analyses))
+        return analyses
 
 
 class TransitoryError(Exception):
