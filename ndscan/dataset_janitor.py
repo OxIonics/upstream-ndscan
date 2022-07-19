@@ -17,7 +17,7 @@ import argparse
 import asyncio
 import logging
 import time
-from typing import Optional
+from typing import Dict, Optional, Set
 from sipyco import common_args, pc_rpc, sync_struct
 
 logger = logging.getLogger(__name__)
@@ -79,12 +79,12 @@ class _NullSyncStruct:
 
 async def run(args):
     #: Current view of all dataset keys existing on the master.
-    dataset_keys = set[str]()
+    dataset_keys: Set[str] = set()
 
     #: Ordered map of pending cleanup tasks, from RID to the time.monotonic() instant at
     #: which to delete the datasets. As the timeout is the same for all RIDs, it will
     #: naturally be a FIFO queue in terms of deletion order.
-    deletions = dict[int, float]()
+    deletions: Dict[int, float] = dict()
 
     #: Notifies the main task (that executes the deletions) that a new task was added,
     #: or something went wrong with one of the connections.
