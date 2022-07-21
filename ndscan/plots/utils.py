@@ -1,3 +1,4 @@
+import html
 import logging
 from typing import Any, Dict, List, Tuple
 from ..utils import eval_param_default
@@ -167,7 +168,7 @@ def extract_linked_datasets(param_schema: Dict[str, Any]) -> List[str]:
     datasets = []
     try:
         # Intercept dataset() to build up list of accessed keys.
-        def log_datasets(dataset, default):
+        def log_datasets(dataset, default=None):
             datasets.append(dataset)
             return default
 
@@ -213,7 +214,7 @@ def setup_axis_item(axis_item, axes: List[Tuple[str, str, str, Dict[str, Any]]])
         unit = spec.get("unit", "")
         if unit:
             unit = "/ " + unit + " "
-        result += "<b>{} {}</b>".format(description, unit)
+        result += f"<b>{html.escape(description)} {html.escape(unit)}</b>"
         if color is not None:
             result += "</span>"
         return result
