@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ndscan"
-version = "0.2.0"
+version = "0.3.0"
 description = "Composable experiment fragments and multidimensional scans for ARTIQ"
 authors = ["David Nadlinger"]
 license = "LGPLv3+"
