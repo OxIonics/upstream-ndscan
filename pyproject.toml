@@ -27,6 +27,7 @@ opentelemetry-api = "^1.11.1"
 pytest = "^6.2.5"
 
 [tool.poetry.scripts]
+ndscan_show = "ndscan.show:main"
 ndscan_dataset_janitor = "ndscan.dataset_janitor:main"
 
 [tool.poetry-dynamic-versioning]
