@@ -15,6 +15,7 @@ from sipyco import pyon
 
 from ..utils import (NoAxesMode, PARAMS_ARG_KEY, eval_param_default,
                      shorten_to_unambiguous_suffixes)
+from ..import interfaces
 
 logger = logging.getLogger(__name__)
 
@@ -270,12 +271,14 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
         if (fqn, path) in self._param_entries:
             return
         schema = self._schema_for_fqn(fqn)
+        param = interfaces.utils.decode(schema)
 
         added_item_count = 0
 
         def add_item(widget_item):
             nonlocal added_item_count
-            group = schema.get("group", None)
+            # group = schema.get("group", None)
+            group = None  # INTERFACES TODO
             if not group:
                 if insert_at_idx == -1:
                     self.addTopLevelItem(widget_item)
@@ -295,7 +298,7 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
         id_item.setFirstColumnSpanned(True)
         id_item.setForeground(0, self.palette().mid())
 
-        main_item = QtWidgets.QTreeWidgetItem([schema["description"]])
+        main_item = QtWidgets.QTreeWidgetItem([param.description])
         add_item(main_item)
 
         # Render description in bold.
@@ -577,12 +580,15 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
 
     def _make_override_entry(self, fqn, path):
         schema = self._schema_for_fqn(fqn)
-
-        is_scannable = ((self.scan_options is not None)
-                        and schema.get("spec", {}).get("is_scannable", True))
+        # INTERFACES TODO
+        # We're converting the interface directly to a string, rather than going through
+        # an intermediate dictionary representation. We should think a bit about the
+        # dataflow here and how this wants to avoid all the encode/decode cycles...
+        param = interfaces.utils.decode(schema)
+        is_scannable = (self.scan_options is not None) and param.is_scannable
 
         options = OrderedDict([])
-        if schema["type"] == "string":
+        if isinstance(param, interfaces.parameters.StringParamInterface):
             options["Fixed"] = StringFixedScanOption
         else:
             # TODO: Properly handle int, add errors (or default to PYON value).
@@ -602,7 +608,7 @@ class OverrideEntry(LayoutWidget):
     def __init__(self, option_classes, schema, path, randomise_icon, *args):
         super().__init__(*args)
 
-        self.schema = schema
+        self.param = interfaces.utils.decode(schema)  # INTERFACES TODO
         self.path = path
         self.randomise_icon = randomise_icon
 
@@ -634,7 +640,7 @@ class OverrideEntry(LayoutWidget):
         self.sync_values = {}
 
     def read_from_params(self, params: dict, manager_datasets) -> None:
-        for o in params.get("overrides", {}).get(self.schema["fqn"], []):
+        for o in params.get("overrides", {}).get(self.param.fqn, []):
             if o["path"] == self.path:
                 self._set_fixed_value(o["value"])
                 return
@@ -656,10 +662,11 @@ class OverrideEntry(LayoutWidget):
                                        "fallback default value given") from None
                     return default
 
-            value = eval_param_default(self.schema["default"], get_dataset)
+            value = eval_param_default(self.param.default, get_dataset)
         except Exception as e:
+            logger.error(f"{self.param.default}, {type(self.param.default)}")
             logger.error("Failed to evaluate defaults string \"%s\": %s",
-                         self.schema["default"], e)
+                         self.param.default, e)
             value = None
         self._set_fixed_value(value)
         self.disable_scan()
@@ -722,7 +729,7 @@ class StringFixedScanOption(ScanOption):
 
     def write_to_params(self, params: dict) -> None:
         o = {"path": self.entry.path, "value": self.box.text()}
-        params["overrides"].setdefault(self.entry.schema["fqn"], []).append(o)
+        params["overrides"].setdefault(self.entry.param.fqn, []).append(o)
 
     def set_value(self, value) -> None:
         self.box.setText(value)
@@ -731,7 +738,7 @@ class StringFixedScanOption(ScanOption):
 class NumericScanOption(ScanOption):
     def __init__(self, entry: OverrideEntry):
         super().__init__(entry)
-        self.scale = self.entry.schema.get("spec", {}).get("scale", 1.0)
+        self.scale = self.entry.param.scale
 
     def _make_divider(self):
         f = QtWidgets.QFrame()
@@ -746,20 +753,23 @@ class NumericScanOption(ScanOption):
         disable_scroll_wheel(box)
         box.valueChanged.connect(self.entry.value_changed)
 
-        spec = self.entry.schema.get("spec", {})
-        step = spec.get("step", 1.0)
+        step = self.entry.param.step
 
         box.setDecimals(8)
         box.setPrecision()
         box.setSingleStep(step / self.scale)
         box.setRelativeStep()
 
-        box.setMinimum(spec.get("min", float("-inf")) / self.scale)
-        box.setMaximum(spec.get("max", float("inf")) / self.scale)
+        min = self.entry.param.min
+        max = self.entry.param.max
+        min = min if min is not None else float("-inf")
+        max = max if max is not None else float("inf")
 
-        unit = spec.get("unit", "")
-        if unit:
-            box.setSuffix(" " + unit)
+        box.setMinimum(min / self.scale)
+        box.setMaximum(max / self.scale)
+
+        if self.entry.param.unit:
+            box.setSuffix(" " + self.entry.param.unit)
         return box
 
     def _make_randomise_box(self):
@@ -778,7 +788,7 @@ class FixedScanOption(NumericScanOption):
 
     def write_to_params(self, params: dict) -> None:
         o = {"path": self.entry.path, "value": self.box.value() * self.scale}
-        params["overrides"].setdefault(self.entry.schema["fqn"], []).append(o)
+        params["overrides"].setdefault(self.entry.param.fqn, []).append(o)
 
     def set_value(self, value) -> None:
         if value is None:
@@ -814,7 +824,7 @@ class RefiningScanOption(NumericScanOption):
 
     def write_to_params(self, params: dict) -> None:
         spec = {
-            "fqn": self.entry.schema["fqn"],
+            "fqn": self.entry.param.fqn,
             "path": self.entry.path,
             "type": "refining",
             "range": {
@@ -868,7 +878,7 @@ class LinearScanOption(NumericScanOption):
 
     def write_to_params(self, params: dict) -> None:
         spec = {
-            "fqn": self.entry.schema["fqn"],
+            "fqn": self.entry.param.fqn,
             "path": self.entry.path,
             "type": "linear",
             "range": {
@@ -913,9 +923,8 @@ class ExpandingScanOption(NumericScanOption):
         layout.setStretchFactor(self.box_spacing, 1)
 
     def write_to_params(self, params: dict) -> None:
-        schema = self.entry.schema
         spec = {
-            "fqn": schema["fqn"],
+            "fqn": self.entry.param.fqn,
             "path": self.entry.path,
             "type": "expanding",
             "range": {
@@ -924,9 +933,9 @@ class ExpandingScanOption(NumericScanOption):
                 "randomise_order": self.check_randomise.isChecked()
             }
         }
-        if (lower := schema["spec"].get("min", None)) is not None:
+        if (lower := self.entry.param.min) is not None:
             spec["range"]["limit_lower"] = lower
-        if (upper := schema["spec"].get("max", None)) is not None:
+        if (upper := self.entry.param.max) is not None:
             spec["range"]["limit_upper"] = upper
         params["scan"].setdefault("axes", []).append(spec)
 
@@ -972,7 +981,7 @@ class CentreSpanScanOption(NumericScanOption):
 
     def write_to_params(self, params: dict) -> None:
         spec = {
-            "fqn": self.entry.schema["fqn"],
+            "fqn": self.entry.param.fqn,
             "path": self.entry.path,
             "type": "centre_span",
             "range": {
@@ -1022,7 +1031,7 @@ class ListScanOption(NumericScanOption):
             logger.info(e)
             values = []
         spec = {
-            "fqn": self.entry.schema["fqn"],
+            "fqn": self.entry.param.fqn,
             "path": self.entry.path,
             "type": "list",
             "range": {
