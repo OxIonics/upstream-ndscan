@@ -103,8 +103,7 @@ class FragmentScanExperiment(EnvExperiment):
 
         spec, no_axes_mode = self.args.make_scan_spec()
         for ax in spec.axes:
-            param = interfaces.utils.decode(ax.param_schema)  # INTERFACES TODO
-            fqn = param.fqn
+            fqn = ax.param.fqn
             param_stores.setdefault(fqn, []).append((ax.path, ax.param_store))
 
         self.fragment.init_params(param_stores)
@@ -146,10 +145,10 @@ class ArgumentInterface(HasEnvironment):
         self._fragments = fragments
 
         instances = dict()
-        self._schemata = dict()
+        self._param_tree = dict()
         always_shown_params = []
         for fragment in fragments:
-            fragment._collect_params(instances, self._schemata)
+            fragment._collect_params(instances, self._param_tree)
 
             for handle in fragment.get_always_shown_params():
                 path = handle.owner._stringize_path()
@@ -163,7 +162,7 @@ class ArgumentInterface(HasEnvironment):
 
         desc = {
             "instances": instances,
-            "schemata": self._schemata,
+            "schemata": {fqn: param.encode() for fqn, param in self._param_tree.items()},
             "always_shown": always_shown_params,
             "overrides": {}
         }
@@ -180,11 +179,9 @@ class ArgumentInterface(HasEnvironment):
         stores = {}
         for fqn, specs in self._params.get("overrides", {}).items():
             try:
-                # INTERFACES TODO
-                # schemata should still be Interface objects at this stage...
-                store_type = type_string_to_param(self._schemata[fqn]).StoreType
+                store_type = self._param_tree[fqn].StoreType
             except KeyError:
-                raise KeyError("Parameter schema not found (likely due to outdated "
+                raise KeyError("Parameter not found (likely due to outdated "
                                "argument editor after changes to experiment; "
                                "try Recompute All Arguments)")
 
@@ -208,10 +205,10 @@ class ArgumentInterface(HasEnvironment):
             fqn = axspec["fqn"]
             pathspec = axspec["path"]
 
-            store_type = type_string_to_param(self._schemata[fqn]).StoreType
+            store_type = self._param_tree[fqn].StoreType
             store = store_type((fqn, pathspec),
                                generator.points_for_level(0, random)[0])
-            axes.append(ScanAxis(self._schemata[fqn], pathspec, store))
+            axes.append(ScanAxis(self._param_tree[fqn], pathspec, store))
 
         options = ScanOptions(scan.get("num_repeats", 1),
                               scan.get("randomise_order_globally", False))
@@ -304,8 +301,7 @@ class TopLevelRunner(HasEnvironment):
 
         axis_indices = {}
         for i, axis in enumerate(self.spec.axes):
-            param = interfaces.utils.decode(axis.param_schema)  # INTERFACES TODO
-            axis_indices[(param.fqn, axis.path)] = i
+            axis_indices[(axis.param.fqn, axis.path)] = i
         self._annotation_context = AnnotationContext(
             lambda handle: axis_indices[handle._store.identity],
             lambda channel: self._short_child_channel_names[channel],
@@ -345,8 +341,7 @@ class TopLevelRunner(HasEnvironment):
         return self._make_coordinate_dict(), self._make_value_dict()
 
     def _make_coordinate_dict(self):
-        # INTERFACES TODO
-        return OrderedDict(((interfaces.utils.decode(a.param_schema).fqn, a.path), s.get_all())
+        return OrderedDict(((a.param.fqn, a.path), s.get_all())
                            for a, s in zip(self.spec.axes, self._coordinate_sinks))
 
     def _make_value_dict(self):

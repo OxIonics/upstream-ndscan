@@ -17,6 +17,7 @@ from .parameters import ParamStore, type_string_to_param
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
 from .utils import is_kernel
+from .. import interfaces
 
 __all__ = [
     "ScanAxis", "ScanSpec", "ScanRunner", "filter_default_analyses", "describe_scan",
@@ -31,9 +32,9 @@ class ScanAxis:
     scan at runtime; i.e. the :class:`.ParamStore` to modify in order to set the
     parameter.
     """
-    def __init__(self, param_schema: Dict[str, Any], path: str,
+    def __init__(self, param: interfaces.parameters.ParamInterface, path: str,
                  param_store: ParamStore):
-        self.param_schema = param_schema
+        self.param = param
         self.path = path
         self.param_store = param_store
 
@@ -379,7 +380,7 @@ def describe_scan(spec: ScanSpec, fragment: ExpFragment,
 
     desc["fragment_fqn"] = fragment.fqn
     axis_specs = [{
-        "param": ax.param_schema,
+        "param": ax.param.encode(),
         "path": ax.path,
     } for ax in spec.axes]
     for ax, gen in zip(axis_specs, spec.generators):

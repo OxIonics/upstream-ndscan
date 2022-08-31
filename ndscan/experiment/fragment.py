@@ -9,6 +9,7 @@ from .parameters import ParamHandle, ParamStore
 from .result_channels import ResultChannel, FloatChannel
 from .utils import is_kernel, path_matches_spec
 from ..utils import strip_prefix
+from ..import interfaces
 
 __all__ = [
     "Fragment", "ExpFragment", "AggregateExpFragment", "TransitoryError",
@@ -495,31 +496,28 @@ class Fragment(HasEnvironment):
 
         return param
 
-    def _collect_params(self, params: Dict[str, List[str]],
-                        schemata: Dict[str, dict]) -> None:
+    def _collect_params(self, fqn_tree: Dict[str, List[str]],
+                        param_tree: Dict[str, interfaces.parameters.ParamInterface]) -> None:
         """Collect free parameters of this fragment and all its subfragments.
 
         :param params: Dictionary to write the list of FQNs for each fragment to,
             indexed by the fragment path in string form.
-        :param schemata: Dictionary to write the schemata for each parameter to,
-            indexed by FQN.
+        :param schemata: Dictionary to write the parameters to, indexed by FQN.
         """
         path = self._stringize_path()
 
         fqns = []
         for param in self._free_params.values():
-            fqn = param.fqn
-            schema = param.encode()
-            if fqn in schemata:
-                if schemata[fqn] != schema:
-                    logger.warn("Mismatch in parameter schema '%s' for '%s'", fqn, path)
+            if param.fqn in param_tree:
+                if param_tree[param.fqn] != param:
+                    logger.warn("Mismatch in parameter tree '%s' for '%s'", fqn, path)
             else:
-                schemata[fqn] = schema
-            fqns.append(fqn)
-        params[path] = fqns
+                param_tree[param.fqn] = param
+            fqns.append(param.fqn)
+        fqn_tree[path] = fqns
 
         for s in self._subfragments:
-            s._collect_params(params, schemata)
+            s._collect_params(fqn_tree, param_tree)
 
     def detach_fragment(self, fragment: "Fragment") -> None:
         """Detach a subfragment from the execution machinery, causing its setup and
