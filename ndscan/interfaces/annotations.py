@@ -6,13 +6,13 @@ from . import common, parameters
 class AnnotationType(enum.Enum):
     CUSTOM = "custom"
 
-# @dataclasses.dataclass
-# class AnnotationInterface(common.Interface):
+@dataclasses.dataclass
+class AnnotationInterface(common.Interface):
 #     parameters: Dict[str, parameters.ParamInterface]
 #     coordinates: Dict[str, AnnotationDataSource]
 
-#     def __post_init__(self):
-#         self.interface_type = common.InterfaceType.ANNOTATION
+    def __post_init__(self):
+        self.interface_type = common.InterfaceType.ANNOTATION
 
 #     @staticmethod
 #     def from_dict(data) -> common.Interface:
