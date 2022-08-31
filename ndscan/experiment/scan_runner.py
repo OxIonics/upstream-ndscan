@@ -13,7 +13,7 @@ from itertools import islice
 from typing import Any, Dict, List, Iterable, Iterator, Tuple
 from .default_analysis import AnnotationContext, DefaultAnalysis
 from .fragment import ExpFragment, TransitoryError, RestartKernelTransitoryError
-from .parameters import ParamStore, type_string_to_param
+from .parameters import ParamStore
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
 from .utils import is_kernel
@@ -159,7 +159,7 @@ class ScanRunner(HasEnvironment):
         self._kscan_param_values_chunk.__func__.__annotations__ = {
             "return":
             TTuple([
-                TList(type_string_to_param(a.param_schema["type"]).CompilerType)
+                TList(a.param.CompilerType)
                 for a in axes
             ])
         }

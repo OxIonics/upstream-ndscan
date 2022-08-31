@@ -17,18 +17,6 @@ from .. import interfaces
 
 __all__ = ["FloatParam", "IntParam", "StringParam"]
 
-# TODO: this should not be needed...
-# INTERFACES TODO
-def type_string_to_param(type_string: interfaces.parameters.ParamInterface):
-    param = interfaces.utils.decode(type_string)
-    """Resolve a param schema type string to the corresponding Param implementation."""
-    if isinstance(param, interfaces.parameters.FloatParamInterface):
-        return FloatParam
-    elif isinstance(param, interfaces.parameters.IntParamInterface):
-        return IntParam
-    elif isinstance(param, interfaces.parameters.StrParam):
-        return StrParam
-    raise NotImplementedError
 
 class InvalidDefaultError(ValueError):
     """Raised when a default value is outside the specified range of valid parameter

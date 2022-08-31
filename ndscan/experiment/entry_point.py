@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 from .default_analysis import AnnotationContext
 from .fragment import (ExpFragment, Fragment, RestartKernelTransitoryError,
                        TransitoryError)
-from .parameters import ParamStore, type_string_to_param
+from .parameters import ParamStore
 from .result_channels import (AppendingDatasetSink, LastValueSink, ScalarDatasetSink,
                               ResultChannel)
 from .scan_generator import GENERATORS, ScanOptions
