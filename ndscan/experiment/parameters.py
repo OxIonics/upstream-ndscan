@@ -7,11 +7,13 @@
 # but to hang our heads in shame and manually instantiate the parameter handling
 # machinery for all supported value types, in particular to handle cases where e.g.
 # both an int and a float parameter is scanned at the same time.
-
+import dataclasses
 from artiq.language import *
 from artiq.language import units
 from typing import Any, Dict, Optional, Tuple, Type, Union
 from ..utils import eval_param_default, GetDataset
+from .. import interfaces
+
 
 __all__ = ["FloatParam", "IntParam", "StringParam"]
 
@@ -217,56 +219,16 @@ def resolve_numeric_scale(scale: Optional[float], unit: str) -> float:
         raise KeyError("Unit '{}' is unknown, you must specify "
                        "the scale manually".format(unit))
 
-
-class FloatParam:
-    HandleType = FloatParamHandle
-    StoreType = FloatParamStore
+@dataclasses.dataclass
+class FloatParam(interfaces.parameters.FloatParamInterface):
+    HandleType: ParamHandle = FloatParamHandle
+    StoreType: ParamStore = FloatParamStore
     CompilerType = TFloat
 
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: Union[str, float],
-                 *,
-                 min: Optional[float] = None,
-                 max: Optional[float] = None,
-                 unit: str = "",
-                 scale: Optional[float] = None,
-                 step: Optional[float] = None,
-                 is_scannable: bool = True):
-
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.min = min
-        self.max = max
-
-        self.unit = unit
-        self.scale = resolve_numeric_scale(scale, unit)
-
-        self.step = step if step is not None else self.scale / 10.0
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        spec = {
-            "is_scannable": self.is_scannable,
-            "scale": self.scale,
-            "step": self.step
-        }
-        if self.min is not None:
-            spec["min"] = self.min
-        if self.max is not None:
-            spec["max"] = self.max
-        if self.unit:
-            spec["unit"] = self.unit
-
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "float",
-            "default": str(self.default),
-            "spec": spec,
-        }
+    def __post_init__(self):
+        super().__post_init__()
+        self.scale = resolve_numeric_scale(self.scale, self.unit)
+        self.step = self.step if self.step is not None else self.scale / 10.0
 
     def eval_default(self, get_dataset: GetDataset) -> float:
         if type(self.default) is str:
@@ -283,50 +245,17 @@ class FloatParam:
         return FloatParamStore(identity, value)
 
 
-class IntParam:
-    HandleType = IntParamHandle
-    StoreType = IntParamStore
+@dataclasses.dataclass
+class IntParam(interfaces.parameters.IntParamInterface):
+    HandleType: ParamHandle = IntParamHandle
+    StoreType: ParamStore = IntParamStore
     CompilerType = TInt32
 
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: Union[str, int],
-                 *,
-                 min: Optional[int] = 0,
-                 max: Optional[int] = None,
-                 unit: str = "",
-                 scale: Optional[int] = None,
-                 is_scannable: bool = True):
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.min = min
-        self.max = max
-
-        self.unit = unit
-        self.scale = resolve_numeric_scale(scale, unit)
+    def __post_init__(self):
+        self.scale = resolve_numeric_scale(self.scale, self.unit)
         if self.scale != 1:
             raise NotImplementedError(
                 "Non-unity scales not implemented for integer parameters")
-
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        spec = {"is_scannable": self.is_scannable, "scale": self.scale}
-        if self.min is not None:
-            spec["min"] = self.min
-        if self.max is not None:
-            spec["max"] = self.max
-        if self.unit:
-            spec["unit"] = self.unit
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "int",
-            "default": str(self.default),
-            "spec": spec
-        }
 
     def eval_default(self, get_dataset: GetDataset) -> int:
         if type(self.default) is str:
@@ -342,32 +271,11 @@ class IntParam:
                 value, self.max))
         return IntParamStore(identity, value)
 
-
-class StringParam:
+@dataclasses.dataclass
+class StringParam(interfaces.parameters.StringParamInterface):
     HandleType = StringParamHandle
     StoreType = StringParamStore
     CompilerType = TStr
-
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: str,
-                 is_scannable: bool = True):
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "string",
-            "default": str(self.default),
-            "spec": {
-                "is_scannable": self.is_scannable
-            }
-        }
 
     def eval_default(self, get_dataset: GetDataset) -> str:
         return eval_param_default(self.default, get_dataset)
