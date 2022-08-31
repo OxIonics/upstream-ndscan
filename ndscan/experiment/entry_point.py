@@ -103,7 +103,8 @@ class FragmentScanExperiment(EnvExperiment):
 
         spec, no_axes_mode = self.args.make_scan_spec()
         for ax in spec.axes:
-            fqn = ax.param_schema["fqn"]
+            param = interfaces.utils.decode(ax.param_schema)  # INTERFACES TODO
+            fqn = param.fqn
             param_stores.setdefault(fqn, []).append((ax.path, ax.param_store))
 
         self.fragment.init_params(param_stores)
@@ -207,7 +208,7 @@ class ArgumentInterface(HasEnvironment):
             fqn = axspec["fqn"]
             pathspec = axspec["path"]
 
-            store_type = type_string_to_param(self._schemata[fqn]["type"]).StoreType
+            store_type = type_string_to_param(self._schemata[fqn]).StoreType
             store = store_type((fqn, pathspec),
                                generator.points_for_level(0, random)[0])
             axes.append(ScanAxis(self._schemata[fqn], pathspec, store))
@@ -303,7 +304,8 @@ class TopLevelRunner(HasEnvironment):
 
         axis_indices = {}
         for i, axis in enumerate(self.spec.axes):
-            axis_indices[(axis.param_schema["fqn"], axis.path)] = i
+            param = interfaces.utils.decode(axis.param_schema)  # INTERFACES TODO
+            axis_indices[(param.fqn, axis.path)] = i
         self._annotation_context = AnnotationContext(
             lambda handle: axis_indices[handle._store.identity],
             lambda channel: self._short_child_channel_names[channel],
@@ -343,7 +345,8 @@ class TopLevelRunner(HasEnvironment):
         return self._make_coordinate_dict(), self._make_value_dict()
 
     def _make_coordinate_dict(self):
-        return OrderedDict(((a.param_schema["fqn"], a.path), s.get_all())
+        # INTERFACES TODO
+        return OrderedDict(((interfaces.utils.decode(a.param_schema).fqn, a.path), s.get_all())
                            for a, s in zip(self.spec.axes, self._coordinate_sinks))
 
     def _make_value_dict(self):
