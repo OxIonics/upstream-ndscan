@@ -32,6 +32,7 @@ from .scan_runner import (ScanAxis, ScanRunner, ScanSpec, describe_scan,
 from .utils import dump_json, is_kernel, to_metadata_broadcast_type
 from ..utils import (merge_no_duplicates, NoAxesMode, PARAMS_ARG_KEY, SCHEMA_REVISION,
                      SCHEMA_REVISION_KEY, shorten_to_unambiguous_suffixes, strip_suffix)
+from ..import interfaces
 
 __all__ = [
     "ArgumentInterface", "TopLevelRunner", "make_fragment_scan_exp",
@@ -178,7 +179,9 @@ class ArgumentInterface(HasEnvironment):
         stores = {}
         for fqn, specs in self._params.get("overrides", {}).items():
             try:
-                store_type = type_string_to_param(self._schemata[fqn]["type"]).StoreType
+                # INTERFACES TODO
+                # schemata should still be Interface objects at this stage...
+                store_type = type_string_to_param(self._schemata[fqn]).StoreType
             except KeyError:
                 raise KeyError("Parameter schema not found (likely due to outdated "
                                "argument editor after changes to experiment; "

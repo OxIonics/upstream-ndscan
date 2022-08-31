@@ -17,11 +17,18 @@ from .. import interfaces
 
 __all__ = ["FloatParam", "IntParam", "StringParam"]
 
-
-def type_string_to_param(name: str):
+# TODO: this should not be needed...
+# INTERFACES TODO
+def type_string_to_param(type_string: interfaces.parameters.ParamInterface):
+    param = interfaces.utils.decode(type_string)
     """Resolve a param schema type string to the corresponding Param implementation."""
-    return {"float": FloatParam, "int": IntParam, "string": StringParam}[name]
-
+    if isinstance(param, interfaces.parameters.FloatParamInterface):
+        return FloatParam
+    elif isinstance(param, interfaces.parameters.IntParamInterface):
+        return IntParam
+    elif isinstance(param, interfaces.parameters.StrParam):
+        return StrParam
+    raise NotImplementedError
 
 class InvalidDefaultError(ValueError):
     """Raised when a default value is outside the specified range of valid parameter
@@ -219,7 +226,7 @@ def resolve_numeric_scale(scale: Optional[float], unit: str) -> float:
         raise KeyError("Unit '{}' is unknown, you must specify "
                        "the scale manually".format(unit))
 
-@dataclasses.dataclass
+# @dataclasses.dataclass
 class FloatParam(interfaces.parameters.FloatParamInterface):
     HandleType: ParamHandle = FloatParamHandle
     StoreType: ParamStore = FloatParamStore
@@ -245,7 +252,7 @@ class FloatParam(interfaces.parameters.FloatParamInterface):
         return FloatParamStore(identity, value)
 
 
-@dataclasses.dataclass
+# @dataclasses.dataclass
 class IntParam(interfaces.parameters.IntParamInterface):
     HandleType: ParamHandle = IntParamHandle
     StoreType: ParamStore = IntParamStore
@@ -271,7 +278,7 @@ class IntParam(interfaces.parameters.IntParamInterface):
                 value, self.max))
         return IntParamStore(identity, value)
 
-@dataclasses.dataclass
+# @dataclasses.dataclass
 class StringParam(interfaces.parameters.StringParamInterface):
     HandleType = StringParamHandle
     StoreType = StringParamStore
