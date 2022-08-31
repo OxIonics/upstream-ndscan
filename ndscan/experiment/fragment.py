@@ -509,7 +509,7 @@ class Fragment(HasEnvironment):
         fqns = []
         for param in self._free_params.values():
             fqn = param.fqn
-            schema = param.describe()
+            schema = param.encode()
             if fqn in schemata:
                 if schemata[fqn] != schema:
                     logger.warn("Mismatch in parameter schema '%s' for '%s'", fqn, path)
