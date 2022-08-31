@@ -103,11 +103,11 @@ class GetDataset(Protocol):
         ...
 
 
-def eval_param_default(value: str, get_dataset: GetDataset) -> Any:
+def eval_param_default(value: Any, get_dataset: GetDataset) -> Any:
     from artiq.language import units
     env = {name: getattr(units, name) for name in units.__all__}
     env.update({"dataset": get_dataset})
-    return eval(value, env)
+    return eval(str(value), env)
 
 
 def merge_no_duplicates(target: dict, source: dict, kind: str = "entries") -> None:
