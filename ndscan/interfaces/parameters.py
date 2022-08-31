@@ -15,7 +15,6 @@ class ParamInterface(common.Interface):
     fqn: str
     description: str
     is_scannable: bool
-    default: str
 
     def __post_init__(self):
         self.interface_type = common.InterfaceType.PARAM
@@ -46,11 +45,12 @@ class ParamInterface(common.Interface):
 
 @dataclasses.dataclass
 class FloatParamInterface(ParamInterface):
-    param_min: float
-    param_max: float
-    param_unit: str  # CHECK type
-    scale: float
-    step: float
+    default: Union[str, float]
+    min: Optional[float] = dataclasses.field(default=None, kw_only=True)
+    max: Optional[float] = dataclasses.field(default=None, kw_only=True)
+    unit: str = dataclasses.field(default="", kw_only=True)
+    scale: Optional[float] = dataclasses.field(default=None, kw_only=True)
+    step: Optional[float] = dataclasses.field(default=None, kw_only=True)
 
     def __post_init__(self):
         super().__post_init__()
@@ -58,10 +58,11 @@ class FloatParamInterface(ParamInterface):
 
 @dataclasses.dataclass
 class IntParamInterface(ParamInterface):
-    param_min: int
-    param_max: int
-    param_unit: str  # CHECK type
-    scale: str  # CHECK type
+    default: Union[str, int]
+    min: Optional[int] = dataclasses.field(default=None, kw_only=True)
+    max: Optional[int] = dataclasses.field(default=None, kw_only=True)
+    unit: str = dataclasses.field(default="", kw_only=True)
+    scale: Optional[int] = dataclasses.field(default=None, kw_only=True)
 
     def __post_init__(self):
         super().__post_init__()
@@ -69,6 +70,8 @@ class IntParamInterface(ParamInterface):
 
 @dataclasses.dataclass
 class StringParam(ParamInterface):
+    default: str
+
     def __post_init__(self):
         super().__post_init__()
         self.interface_subtype = ParamType.STR
