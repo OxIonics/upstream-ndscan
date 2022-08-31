@@ -1,5 +1,6 @@
 import enum
 import dataclasses
+from typing import Dict, Optional, Union
 from . import common
 
 class ParamType(enum.Enum):
@@ -11,10 +12,10 @@ class ParamType(enum.Enum):
 @dataclasses.dataclass
 class ParamInterface(common.Interface):
     interface_subtype: ParamType = dataclasses.field(init=False)
+    # TODO: can we make is_scannable an attr here? How to handle defaults
 
-    fqn: str
-    description: str
-    is_scannable: bool
+    fqn: str = dataclasses.field()
+    description: str = dataclasses.field()
 
     def __post_init__(self):
         self.interface_type = common.InterfaceType.PARAM
@@ -46,11 +47,12 @@ class ParamInterface(common.Interface):
 @dataclasses.dataclass
 class FloatParamInterface(ParamInterface):
     default: Union[str, float]
-    min: Optional[float] = dataclasses.field(default=None, kw_only=True)
-    max: Optional[float] = dataclasses.field(default=None, kw_only=True)
-    unit: str = dataclasses.field(default="", kw_only=True)
-    scale: Optional[float] = dataclasses.field(default=None, kw_only=True)
-    step: Optional[float] = dataclasses.field(default=None, kw_only=True)
+    min: Optional[float] = dataclasses.field(default=None)#, kw_only=True)
+    max: Optional[float] = dataclasses.field(default=None)#, kw_only=True)
+    unit: str = dataclasses.field(default="")#, kw_only=True)
+    scale: Optional[float] = dataclasses.field(default=None)#, kw_only=True)
+    step: Optional[float] = dataclasses.field(default=None)#, kw_only=True)
+    is_scannable: bool = dataclasses.field(default=True)
 
     def __post_init__(self):
         super().__post_init__()
@@ -59,18 +61,20 @@ class FloatParamInterface(ParamInterface):
 @dataclasses.dataclass
 class IntParamInterface(ParamInterface):
     default: Union[str, int]
-    min: Optional[int] = dataclasses.field(default=None, kw_only=True)
-    max: Optional[int] = dataclasses.field(default=None, kw_only=True)
-    unit: str = dataclasses.field(default="", kw_only=True)
-    scale: Optional[int] = dataclasses.field(default=None, kw_only=True)
+    min: Optional[int] = dataclasses.field(default=None)#, kw_only=True)
+    max: Optional[int] = dataclasses.field(default=None)#, kw_only=True)
+    unit: str = dataclasses.field(default="")#, kw_only=True)
+    scale: Optional[int] = dataclasses.field(default=None)#, kw_only=True)
+    is_scannable: bool = dataclasses.field(default=True)
 
     def __post_init__(self):
         super().__post_init__()
         self.interface_subtype = ParamType.INT
 
 @dataclasses.dataclass
-class StringParam(ParamInterface):
+class StringParamInterface(ParamInterface):
     default: str
+    is_scannable: bool = dataclasses.field(default=True)
 
     def __post_init__(self):
         super().__post_init__()
