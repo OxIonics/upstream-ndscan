@@ -1,7 +1,7 @@
 import json
 import numpy
 from typing import Any, Iterable, Optional
-
+from .. import interfaces
 
 def path_matches_spec(path: Iterable[str], spec: str) -> bool:
     # TODO: Think about how we want to match.
@@ -20,22 +20,11 @@ def is_kernel(func) -> bool:
     return meta.core_name is not None and not meta.portable
 
 
-class NumpyToVanillaEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, numpy.integer):
-            return int(obj)
-        if isinstance(obj, numpy.floating):
-            return float(obj)
-        if isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
-
-
 def dump_json(obj: Any) -> str:
     """Serialise ``obj`` as a JSON string, with NumPy numerical/array types encoded as
     their vanilla Python counterparts.
     """
-    return json.dumps(obj, cls=NumpyToVanillaEncoder)
+    return json.dumps(obj, cls=interfaces.common.Encoder)
 
 
 def to_metadata_broadcast_type(obj: Any) -> Optional[Any]:

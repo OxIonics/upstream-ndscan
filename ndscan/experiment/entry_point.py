@@ -480,14 +480,18 @@ class TopLevelRunner(HasEnvironment):
             name: channel.describe()
             for name, channel in self._analysis_results.items()
         }
+        # import pprint
+        # pprint.pprint(self._scan_desc);assert 0
 
-        for name, value in self._scan_desc.items():
+        for key, value in self._scan_desc.items():
             # Flatten arrays/dictionaries to JSON strings for HDF5 compatibility.
             ds_value = to_metadata_broadcast_type(value)
+            if isinstance(key, interfaces.common.Interface):
+                key = key.encode()
             if ds_value is None:
-                push(name, dump_json(value))
+                push(key, dump_json(value))
             else:
-                push(name, ds_value)
+                push(key, ds_value)
 
     def create_applet(self, title: str, group: str = "ndscan"):
         cmd = [

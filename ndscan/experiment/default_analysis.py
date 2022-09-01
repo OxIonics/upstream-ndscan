@@ -16,12 +16,14 @@ Two modalities are supported:
 Both can produce annotations; particular values or plot locations highlighted in the
 user interface.
 """
+import dataclasses
 import logging
 from typing import Any, Callable, Dict, List, Iterable, Optional, Set, Tuple, Union
 
 from ..utils import FIT_OBJECTS
 from .parameters import ParamHandle
 from .result_channels import ResultChannel
+from .. import interfaces
 
 __all__ = [
     "Annotation", "DefaultAnalysis", "CustomAnalysis", "OnlineFit",
@@ -38,6 +40,10 @@ class AnnotationValueRef:
     def __init__(self, kind: str, **kwargs):
         self.spec = {"kind": kind, **kwargs}
 
+
+# INTERFACES TODO: REMOVE THIS?
+class Annotation(interfaces.annotations.AnnotationInterface):
+    pass
 
 class AnnotationContext:
     """Resolves entities in user-specified annotation schemata to stringly-typed
@@ -79,34 +85,21 @@ class AnnotationContext:
         return AnnotationValueRef("fixed", value=obj)
 
 
-class Annotation:
-    """Annotation to be displayed alongside scan result data, recording derived
-    quantities (e.g. a fit minimizer).
-    """
-    def __init__(self,
-                 kind: str,
-                 coordinates: Optional[dict] = None,
-                 parameters: Optional[dict] = None,
-                 data: Optional[dict] = None):
-        self.kind = kind
-        self.coordinates = {} if coordinates is None else coordinates
-        self.parameters = {} if parameters is None else parameters
-        self.data = {} if data is None else data
+def annotation_to_dict(annotation: interfaces.annotations.AnnotationInterface,
+                       context: AnnotationContext) -> Dict[str, Any]:
+    def to_spec_map(dictionary):
+        result = {}
+        for key, value in dictionary.items():
+            keyspec = context.describe_coordinate(key)
+            valuespec = context.describe_value(value).spec
+            result[keyspec] = valuespec
+            print(keyspec, valuespec)
+        return result
 
-    def describe(self, context: AnnotationContext) -> Dict[str, Any]:
-        def to_spec_map(dictionary):
-            result = {}
-            for key, value in dictionary.items():
-                keyspec = context.describe_coordinate(key)
-                valuespec = context.describe_value(value).spec
-                result[keyspec] = valuespec
-            return result
-
-        spec = {"kind": self.kind}
-        spec["coordinates"] = to_spec_map(self.coordinates)
-        spec["parameters"] = self.parameters
-        spec["data"] = to_spec_map(self.data)
-        return spec
+    spec = dataclasses.asdict(annotation)
+    if hasattr(annotation, "coordinates"):
+        spec["coordinates"] = to_spec_map(spec["coordinates"])
+    return spec
 
 
 #: A tuple ``(fqn, path_spec)`` describing an axis being scanned over. This is the
@@ -190,7 +183,7 @@ class CustomAnalysis(DefaultAnalysis):
         required_axes: Iterable[ParamHandle],
         analyze_fn: Callable[[
             Dict[ParamHandle, list], Dict[ResultChannel, list], Dict[str, ResultChannel]
-        ], Optional[List[Annotation]]],
+        ], Optional[List[interfaces.annotations.AnnotationInterface]]],
         analysis_results: Iterable[ResultChannel] = [],
     ):
         self._required_axis_handles = set(required_axes)
@@ -246,7 +239,7 @@ class CustomAnalysis(DefaultAnalysis):
         if annotations is None:
             # Tolerate the user forgetting the return statement.
             annotations = []
-        return [a.describe(context) for a in annotations]
+        return [annotation_to_dict(a, context) for a in annotations]
 
 
 #: Default points of interest for various fit types (e.g. highlighting the π time for a
@@ -366,30 +359,30 @@ class OnlineFit(DefaultAnalysis):
                                       result_key=key)
 
         annotations = [
-            Annotation("computed_curve",
-                       parameters={
-                           "function_name": self.fit_type,
-                           "associated_channels": channels
-                       },
-                       data={
+            interfaces.annotations.ComputedCurveAnnotationInteface(
+                function_name=self.fit_type,
+                associated_channels=channels,
+                data={
                            k: analysis_ref(k)
                            for k in FIT_OBJECTS[self.fit_type].parameter_names
                        })
         ]
+
         for a in self.annotations.values():
             # TODO: Change API to allow more general annotations.
             if set(a.keys()) == set("x"):
                 annotations.append(
-                    Annotation(
-                        "location",
+                    interfaces.annotations.LocationAnnotationInteface(
                         coordinates={self.data["x"]: analysis_ref(a["x"])},
                         data={
                             context.describe_coordinate(self.data["x"]) + "_error":
                             analysis_ref(a["x"] + "_error")
                         },
-                        parameters={"associated_channels": channels}))
+                        associated_channels=channels
+                    )
+                )
 
-        return [a.describe(context) for a in annotations], {
+        return [annotation_to_dict(a, context) for a in annotations], {
             analysis_identifier: {
                 "kind": "named_fit",
                 "fit_type": self.fit_type,
