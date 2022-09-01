@@ -3,7 +3,10 @@ import json
 from . import analysis, annotations, common, parameters, results
 
 def decode(data) -> common.Interface:
-    data_dict = json.loads(data)
+    if isinstance(data, dict):
+        data_dict = data
+    else:
+        data_dict = json.loads(data)
 
     if not "interface_type" in data_dict:
         raise ValueError(f"Invalid interface schema (missing interface type): {data}")
