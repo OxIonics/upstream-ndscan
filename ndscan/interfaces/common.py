@@ -6,6 +6,8 @@ import inspect
 import json
 from typing import Any, TypeVar
 
+# TODO: find instances of "schema" / "schemata" in the code base and see which ones
+# we can replace with more specific types / names
 class Encoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, numpy.integer):

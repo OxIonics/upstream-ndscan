@@ -16,6 +16,7 @@ class ParamInterface(common.Interface):
 
     fqn: str = dataclasses.field()
     description: str = dataclasses.field()
+    default: Any
 
     def __post_init__(self):
         self.interface_type = common.InterfaceType.PARAM
@@ -74,6 +75,7 @@ class IntParamInterface(ParamInterface):
 @dataclasses.dataclass
 class StringParamInterface(ParamInterface):
     default: str
+    # should be in parent class but for issue around ordering of default params
     is_scannable: bool = dataclasses.field(default=True)
 
     def __post_init__(self):

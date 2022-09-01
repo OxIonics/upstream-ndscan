@@ -214,7 +214,36 @@ def resolve_numeric_scale(scale: Optional[float], unit: str) -> float:
         raise KeyError("Unit '{}' is unknown, you must specify "
                        "the scale manually".format(unit))
 
-# @dataclasses.dataclass
+# TODO:
+# Do we want ParamInterfaces to be extensible through custom parameters? A requirement
+# here is that there is no direct access to members of `ParamInterface` subtypes which
+# are not common to all subtypes (to think about: is there a good way of enforcing this
+# commonality through a shared parent class? I've tried to avoid multiple inheritance
+# of dataclasses) the codebase -- everything should be done through common member
+# functions. Need to check to what extend this is already the case / think about whether
+# this is something we could / should do
+# The only place I'm currently aware of where this is not already the case is the
+# argument editor, which special cases string parameters. AFAICT what is really being
+# tested there is whether the parameter is a numeric type which we can scan or something
+# else (e.g. if we add enum/bool types in the future). This can probably be better done
+# by adding a dtype attribute and checking whether that is numeric...
+
+class Param(interfaces.parameters.ParamInterface):
+    # Should the param instances inherit from this? How would we handle this? At present
+    # this is not used anywhere, just me noting down what the common interface is for
+    # my own reference
+    # The only bits that aren't common are the min/max/unit/scale
+    HandleType: ParamHandle
+    StoreType: ParamStore
+    CompilerType: Any  # what should this be?
+    # store the python type here as an attribute? Cleaner way of doing type annotations?
+
+    def eval_default(self, get_dataset: GetDataset) -> Any:
+        raise NotImplementedError
+
+    def make_store(self, identity: Tuple[str, str], value: Any) -> ParamStore:
+        raise NotImplementedError
+
 class FloatParam(interfaces.parameters.FloatParamInterface):
     HandleType: ParamHandle = FloatParamHandle
     StoreType: ParamStore = FloatParamStore
