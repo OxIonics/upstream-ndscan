@@ -14,10 +14,13 @@ class Encoder(json.JSONEncoder):
             return float(obj)
         if isinstance(obj, numpy.ndarray):
             return obj.tolist()
-        if dataclasses.is_dataclass(obj):
-            return dataclasses.asdict(obj)
+        if isinstance(obj, Interface):
+            return obj.to_dict()
         if isinstance(obj, enum.Enum):
             return obj.value
+        if hasattr(obj, "spec"):  # INTERFACES TODO AnnotationValueRef
+            return obj.spec
+        raise ValueError(f"Unsupported object type {obj}")
 
 InterfaceType = TypeVar('T', bound='Parent')
 
@@ -66,6 +69,9 @@ class Interface():
     def get_type() -> enum.Enum:
         raise NotImplementedError
 
+    def to_dict(self):
+        return dataclasses.asdict(self)
+
 def import_class(module_name: str, class_name: str) -> Any:
     try:
         module = importlib.import_module(module_name)
@@ -82,9 +88,9 @@ def import_class(module_name: str, class_name: str) -> Any:
     cls = getattr(module, class_name)
     return cls
 
-def make_custom_interface(interface_class: Interface, applet_class: Interface):
-    """ Takes in an Interface class and its corresponding applet-side subclass and
-    returns a CustomInterface class. """
+def make_custom_interface(interface_class: Interface, decodes_to: Optional[Interface]=None):
+    """ Takes in an Interface class and returns a CustomInterface class. """
+    decodes_to = decodes_to if decodes_to is not None else interface_class
 
     @dataclasses.dataclass
     class CustomInterfaceImpl(interface_class):
