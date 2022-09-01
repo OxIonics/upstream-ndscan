@@ -23,11 +23,14 @@ different granularities of change tracking might be more appropriate for more co
 situations.)
 """
 
+import dataclasses
 import logging
 import numpy
 from qasync import QtCore
 from typing import Any, Callable, Dict, List, Optional
 from .online_analysis import OnlineNamedFitAnalysis
+from ...import interfaces
+from .. annotations import interface_to_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -119,15 +122,9 @@ class OnlineAnalysisDataSource(AnnotationDataSource):
         return self._analysis.get_data().get(self._key, None)
 
 
-class Annotation:
-    def __init__(self, kind: str, parameters: Dict[str, Any],
-                 coordinates: Dict[str, AnnotationDataSource],
-                 data: Dict[str, AnnotationDataSource]):
-        self.kind = kind
-        self.parameters = parameters
-        self.coordinates = coordinates
-        self.data = data
-
+@dataclasses.dataclass
+class Annotation(interfaces.annotations.AnnotationInterface):
+    pass
 
 class Root(QtCore.QObject):
     """The root of a plot data tree, i.e. all the data making up a plot displayed in a
@@ -173,8 +170,8 @@ class ScanModel(Model):
                  context: Context):
         super().__init__(schema_revision, context)
         self.axes = axes
-        self._annotations = []
-        self._annotation_schemata = []
+        self._annotations = []  # INTERFACES TODO: type annotation
+        # INTERFACES TODO: removed _annotation_schemata
         self._online_analyses = {}
 
     def get_point_data(self) -> Dict[str, Any]:
@@ -192,48 +189,70 @@ class ScanModel(Model):
     # design.
     #
 
-    def _set_annotation_schemata(self, schemata: List[Dict[str, Any]]):
+    # INTERACES TODO: changed from _set_annotation_schemata
+    # This function used to do two things: decode the annotations and rebind the
+    # data sources. I've split these into a pair of functions
+    def _decode_annotations(self, descriptions: List[Dict[str, Any]]):
+        self._annotations = []
+        for desc in descriptions:
+            # INTERFACES TODO: applet-side decoder!
+            annotation = interfaces.utils.decode(desc)
+            assert isinstance(annotation, interfaces.annotations.AnnotationInterface)
+            self._annotations.append(interface_to_analysis(annotation))
+
+        self._rebind_annotation_data_sources()
+
+    def _rebind_annotation_data_sources(self):
         """Replace annotations with ones created according to the given schemata.
 
         This will be called by concrete subclasses once/whenever they have received the
         annotation metadata.
         """
-        self._annotation_schemata = schemata
-        self._annotations = []
 
-        def data_source(spec):
-            kind = spec["kind"]
-            if kind == "fixed":
-                return FixedDataSource(spec["value"])
+        def data_source(source_desc):
+            # INTERFACES TODO this should not be a dict!
+            # WHAT KIND OF OBJECT SHOULD THIS BE?
+            # SOME SHOULD BE IN THE INITIAL DECODE...
+            # THIS SHOULD MOVE INTO A MEMBER FUNCTION of the applet-side interface
+            # to allow for custom data sources
+            data_source = interfaces.utils.decode(source_desc)
+            if not isinstance(data_source, interfaces.annotations.AnnotationDataSourceInterface):
+                raise ValueError(f"Expected an annotation data source, got a {data_souce.interface_type}")
 
-            # `online_result` was called `analysis_result` prior to revision 2, with
-            # identical semantics; analysis results proper didn't exit.
-            if kind == "online_result" or (self.schema_revision < 2
-                                           and kind == "analysis_result"):
-                analysis = self._online_analyses.get(spec["analysis_name"], None)
+            # THIS CODE should move into plots.annotations into a from_interface func
+            # or merge the interface classes with the annotation items classes
+            if isinstance(data_source, interfaces.annotations.FixedDataSourceInterface):
+                return FixedDataSource(data_source.value)
+
+            if isinstance(data_source, interfaces.annotations.OnlineResultDataSourceInterface):
+                analysis = self._online_analyses.get(data_source.analysis_name, None)
                 if analysis is None:
                     return None
-                return OnlineAnalysisDataSource(analysis, spec["result_key"])
-            if kind == "analysis_result":
-                name = spec["name"]
-                source = self.get_analysis_result_source(name)
+                return OnlineAnalysisDataSource(analysis, data_source.result_key)
+            if isinstance(data_sorce, AnalysisResultSourceInterface):
+                source = self.get_analysis_result_source(data_source.name)
                 if source is None:
-                    logger.info("Analysis result data source not found: %s", name)
+                    logger.info("Analysis result data source not found: %s", data_source.name)
                 return source
 
-            logger.info("Ignoring unsupported annotation data source type: '%s'", kind)
+            logger.info("Ignoring unsupported annotation data source type: '%s'", data_source.interface_subtype)
+            assert 0  # INTERFACES TODO: should not be reached
             return None
 
-        def to_data_sources(specs):
-            return {k: data_source(v) for k, v in specs.items()}
+        for idx, annotation in enumerate(self._annotations):
+            annotation.data = {k: data_source(v) for k, v in annotation.data.items()}
+            if hasattr(annotation, "channels"):
+                annotation.data = {k: data_source(v) for k, v in annotation.channels.items()}
 
-        for schema in schemata:
-            sources = [to_data_sources(schema.get(n)) for n in ("coordinates", "data")]
-            if any(s is None for t in sources for s in t.values()):
-                logger.warning("Ignoring analysis, not all data found: %s", schema)
-                continue
-            self._annotations.append(
-                Annotation(schema["kind"], schema.get("parameters", {}), *sources))
+            # if any(s is None for t in bound_sources for s in t.values()):
+                # logger.warning("Ignoring analysis, not all data found: %s", annotation)
+                # continue
+
+        print("REBOUND SOURCES")
+        for annotation in self._annotations:
+            import pprint
+            pprint.pprint(annotation.data)
+        print(">....")
         self.annotations_changed.emit(self._annotations)
 
     def _set_online_analyses(self, analysis_schemata: Dict[str, Dict[str,
@@ -254,5 +273,4 @@ class ScanModel(Model):
             else:
                 logger.warning("Ignoring unsupported online analysis type: '%s'", kind)
 
-        # Rebind annotation schemata to new analysis data sources.
-        self._set_annotation_schemata(self._annotation_schemata)
+        self._rebind_annotation_data_sources()

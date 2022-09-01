@@ -21,6 +21,8 @@ def decode(data) -> common.Interface:
         cls = parameters.ParamInterface
     elif interface_type == common.InterfaceType.RESULT:
         cls = result.ResultInterface
+    elif interface_type == common.InterfaceType.ANNOTATION_DATA_SOURCE:
+        cls = annotations.AnnotationDataSourceInterface
     else:
         raise ValueError(f"Unrecognised interface type: {interface_type}")
 

@@ -1,6 +1,6 @@
 import enum
 import dataclasses
-from typing import Dict, Optional, List
+from typing import Any, Dict, Optional, List
 from . import common, parameters
 
 class AnnotationType(enum.Enum):
@@ -18,8 +18,11 @@ class AnnotationInterface(common.Interface):
     def __post_init__(self):
         self.interface_type = common.InterfaceType.ANNOTATION
 
-    @staticmethod
-    def from_dict(data) -> common.Interface:
+    def get_sources(self):
+        return [self.data]
+
+    @classmethod
+    def from_dict(cls, data) -> common.Interface:
         if not "interface_subtype" in data:
             raise ValueError(
                 f"Invalid annotation interface description (missing annotation subtype): {data}"
@@ -28,16 +31,16 @@ class AnnotationInterface(common.Interface):
         subtype = AnnotationType(data.pop("interface_subtype"))
 
         if subtype == AnnotationType.COMPUTED_CURVE:
-            return ComputedCurveAnnotationInteface(**data)
+            return ComputedCurveAnnotationInterface(**data)
         elif subtype == AnnotationType.CUSTOM:
             return common.CustomInterface.from_dict(data)
         elif subtype == AnnotationType.LOCATION:
-            return LocationAnnotationInteface(**data)
+            return LocationAnnotationInterface(**data)
 
         raise ValueError(f"Unrecognised annotation subtype: {subtype}")
 
 @dataclasses.dataclass
-class ComputedCurveAnnotationInteface(AnnotationInterface):
+class ComputedCurveAnnotationInterface(AnnotationInterface):
     function_name: str
     associated_channels: str
 
@@ -47,7 +50,7 @@ class ComputedCurveAnnotationInteface(AnnotationInterface):
 
 
 @dataclasses.dataclass
-class LocationAnnotationInteface(AnnotationInterface):
+class LocationAnnotationInterface(AnnotationInterface):
     associated_channels: List
     associated_channels: str
     coordinates: Optional[Dict]# = None
@@ -55,3 +58,65 @@ class LocationAnnotationInteface(AnnotationInterface):
     def __post_init__(self):
         super().__post_init__()
         self.interface_subtype = AnnotationType.LOCATION
+
+    def get_sources(self):
+        return super().get_sources() + [self.coordinates]
+
+# TODO: CURVE Annotation
+
+class AnnotationDataSourceType(enum.Enum):
+    ANALYSIS_RESULT = "analysis_result"
+    CUSTOM = "custom"
+    FIXED = "fixed"
+    ONLINE_RESULT = "online_result"
+
+# Where should this live?
+@dataclasses.dataclass
+class AnnotationDataSourceInterface(common.Interface):
+    def __post_init__(self):
+        self.interface_type = common.InterfaceType.ANNOTATION_DATA_SOURCE
+
+    @classmethod
+    def from_dict(cls, data) -> common.Interface:
+        if not "interface_subtype" in data:
+            raise ValueError(
+                f"Invalid annotation data source interface (missing subtype): {data}"
+            )
+
+        subtype = AnnotationDataSourceType(data.pop("interface_subtype"))
+
+        if subtype == AnnotationDataSourceType.ANALYSIS_RESULT:
+            return AnalysisResultSourceInterface(**data)
+        elif subtype == AnnotationDataSourceType.CUSTOM:
+            return common.CustomInterface.from_dict(data)
+        elif subtype == AnnotationDataSourceType.FIXED:
+            return FixedDataSourceInterface(**data)
+        elif subtype == AnnotationDataSourceType.ONLINE_RESULT:
+            return OnlineResultDataSourceInterface(**data)
+
+        raise ValueError(f"Unrecognised annotation subtype: {subtype}")
+
+@dataclasses.dataclass
+class FixedDataSourceInterface(AnnotationDataSourceInterface):
+    value: Any
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.interface_subtype = AnnotationDataSourceType.FIXED
+
+@dataclasses.dataclass
+class OnlineResultDataSourceInterface(AnnotationDataSourceInterface):
+    analysis_name: Any  # TYPE?
+    result_key: str
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.interface_subtype = AnnotationDataSourceType.ONLINE_RESULT
+
+@dataclasses.dataclass
+class AnalysisResultSourceInterface(AnnotationDataSourceInterface):
+    name: str
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.interface_subtype = AnnotationDataSourceType.ANALYSIS_RESULT

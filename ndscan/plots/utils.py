@@ -2,6 +2,7 @@ import html
 import logging
 from typing import Any, Dict, List, Tuple
 from ..utils import eval_param_default
+from ..import interfaces
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +188,8 @@ def format_param_identity(schema: Dict[str, Any]) -> str:
     path = schema["path"]
     if not path:
         path = "/"
-    shortened_fqn = schema["param"]["fqn"].split(".")[-1]
+    param = interfaces.utils.decode(schema["param"])  # INTERFACES TODO
+    shortened_fqn = param.fqn.split(".")[-1]
     return shortened_fqn + "@" + path
 
 
@@ -196,22 +198,31 @@ def setup_axis_item(axis_item, axes: List[Tuple[str, str, str, Dict[str, Any]]])
     metadata.
 
     :param axis_item: The :class:`pyqtgraph.AxisItem` to set up.
-    :param axes: A list of tuples ``(description, identity_string, color, spec)``,
+    :param axes: A list of tuples ``(description, identity_string, color, param)``,
         giving for each logical axes to be displayed on the target axis item the name
         and source fragment identity to be displayed, the series color to render it in,
-        and the backing parameter/result channel metadata.
+        and the backing parameter/result channel interface.
     :return: A tuple ``(unit_suffix, data_to_display_scale)`` of the unit suffix to
         display when referring to coordinates on this axis, and the scale factor to
         apply to compute the data from display coordinates due to the applied units.
     """
     def label_html(description, identity_string, color, spec):
+        # INTERFACES TODO
+        if isinstance(spec, dict):
+            unit = spec["unit"]
+        elif isinstance(spec, interfaces.common.Interface):
+            assert isinstance(spec, interfaces.parameters.ParamInterface)
+            param = spec
+            unit = param.unit
+        else:
+            assert 0, spec
+
         result = ""
         if color is not None:
             if isinstance(color, str) and len(color) == 9 and color[0] == "#":
                 # KLUDGE: Reorder RGBA to ARGB.
                 color = "#" + color[7:] + color[1:7]
             result += "<span style='color: \"{}\"'>".format(color)
-        unit = spec.get("unit", "")
         if unit:
             unit = "/ " + unit + " "
         result += f"<b>{html.escape(description)} {html.escape(unit)}</b>"
@@ -227,11 +238,22 @@ def setup_axis_item(axis_item, axes: List[Tuple[str, str, str, Dict[str, Any]]])
 
     _, _, _, spec = axes[0]
     unit_suffix = ""
-    unit = spec.get("unit", "")
+    # INTERFACES TODO
+    if isinstance(spec, dict):
+        unit = spec["unit"]
+        scale = spec["scale"]
+    elif isinstance(spec, interfaces.common.Interface):
+        assert isinstance(spec, interfaces.parameters.ParamInterface)
+        param = spec
+        unit = param.unit
+        scale = param.scale
+    else:
+        assert 0, spec
+
     if unit:
         unit_suffix = " " + unit
 
-    data_to_display_scale = 1 / spec["scale"]
+    data_to_display_scale = 1 / scale
     axis_item.setScale(data_to_display_scale)
     axis_item.autoSIPrefix = False
     return unit_suffix, data_to_display_scale

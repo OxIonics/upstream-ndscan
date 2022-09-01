@@ -12,6 +12,8 @@ from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
                     FIT_COLORS, SERIES_COLORS)
+from ..import interfaces
+from . import annotations
 
 logger = logging.getLogger(__name__)
 
@@ -105,11 +107,11 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         self.series = []
 
         x_schema = self.model.axes[0]
-        self.x_param_spec = x_schema["param"]["spec"]
+        self.param = param = interfaces.utils.decode(x_schema["param"])  # INTERFACES TODO
         self.x_unit_suffix, self.x_data_to_display_scale = setup_axis_item(
             self.getAxis("bottom"),
-            [(x_schema["param"]["description"], format_param_identity(x_schema), None,
-              self.x_param_spec)])
+            [(param.description, format_param_identity(x_schema), None,
+              param)])
         self.y_unit_suffix = None
         self.y_data_to_display_scale = None
         self.crosshair = None
@@ -214,54 +216,10 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             return pyqtgraph.PlotCurveItem(pen=pen)
 
         annotations = self.model.get_annotations()
-        for a in annotations:
-            if a.kind == "location":
-                if set(a.coordinates.keys()) == set(["axis_0"]):
-                    associated_series_idx = max(
-                        channel_ref_to_series_idx(chan)
-                        for chan in a.parameters.get("associated_channels", [None]))
-
-                    color = FIT_COLORS[associated_series_idx % len(FIT_COLORS)]
-                    vb = self.series[associated_series_idx].view_box
-                    line = VLineItem(a.coordinates["axis_0"],
-                                     a.data.get("axis_0_error", None), vb, color,
-                                     self.x_data_to_display_scale, self.x_unit_suffix)
-                    self.annotation_items.append(line)
-                    continue
-
-            if a.kind == "curve":
-                associated_series_idx = None
-                for series_idx, series in enumerate(self.series):
-                    match_coords = set(["axis_0", "channel_" + series.data_name])
-                    if set(a.coordinates.keys()) == match_coords:
-                        associated_series_idx = series_idx
-                        break
-                if associated_series_idx is not None:
-                    curve = make_curve_item(associated_series_idx)
-                    series = self.series[associated_series_idx]
-                    vb = series.view_box
-                    item = CurveItem(a.coordinates["axis_0"],
-                                     a.coordinates["channel_" + series.data_name], vb,
-                                     curve)
+        for annotation in annotations:
+            item = annotation.get_item(channel_ref_to_series_idx, make_curve_item, self.series, self.param)
+            if item is not None:
                     self.annotation_items.append(item)
-                    continue
-
-            if a.kind == "computed_curve":
-                function_name = a.parameters.get("function_name", None)
-                if ComputedCurveItem.is_function_supported(function_name):
-                    associated_series_idx = max(
-                        channel_ref_to_series_idx(chan)
-                        for chan in a.parameters.get("associated_channels", [None]))
-
-                    x_limits = [self.x_param_spec.get(n, None) for n in ("min", "max")]
-                    curve = make_curve_item(associated_series_idx)
-                    vb = self.series[associated_series_idx].view_box
-                    item = ComputedCurveItem(function_name, a.data, vb, curve, x_limits)
-                    self.annotation_items.append(item)
-                    continue
-
-            logger.info("Ignoring annotation of kind '%s' with coordinates %s", a.kind,
-                        list(a.coordinates.keys()))
 
     def build_context_menu(self, builder):
         x_schema = self.model.axes[0]

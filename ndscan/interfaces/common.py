@@ -4,7 +4,7 @@ import enum
 import importlib
 import inspect
 import json
-from typing import Any, TypeVar
+from typing import Any, Optional, TypeVar
 
 # TODO: find instances of "schema" / "schemata" in the code base and see which ones
 # we can replace with more specific types / names
@@ -29,11 +29,12 @@ InterfaceType = TypeVar('T', bound='Parent')
 class InterfaceType(enum.Enum):
     ANALYSIS = "analysis"
     ANNOTATION = "annotation"
+    ANNOTATION_DATA_SOURCE = "annotation_data_source"
     PARAM = "param"
     RESULT = "result"
 
 @dataclasses.dataclass
-class Interface():
+class Interface:
     """ Base class for ndscan interfaces.
 
     Interfaces define the boundary between the experiment and applet sides of ndscan.

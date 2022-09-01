@@ -32,14 +32,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
-class AnnotationValueRef:
-    """Marker type to distinguish an already-serialised annotation value source
-    specification from an user-supplied value of dictionary type.
-    """
-    def __init__(self, kind: str, **kwargs):
-        self.spec = {"kind": kind, **kwargs}
-
+AnnotationDataSource = interfaces.annotations.AnnotationDataSourceInterface
 
 # INTERFACES TODO: REMOVE THIS?
 class Annotation(interfaces.annotations.AnnotationInterface):
@@ -73,16 +66,21 @@ class AnnotationContext:
             return "channel_" + self._name_channel(obj)
         return obj
 
-    def describe_value(self, obj) -> AnnotationValueRef:
-        if isinstance(obj, AnnotationValueRef):
+    # INTERFACES TODO: rename to describe data source?
+    def describe_value(self, obj) -> AnnotationDataSource:
+        if isinstance(obj, AnnotationDataSource):
             return obj
         if isinstance(obj, ResultChannel):
             # Only emit analysis result reference if it is actually exported (might not
             # be for a subscan) – emit direct value reference otherwise.
+
             if self._analysis_result_is_exported(obj):
-                return AnnotationValueRef("analysis_result", name=obj.path)
+                return interfaces.annotations.AnalysisResultDataSource(
+                    name=obj.path
+                    )
             obj = obj.sink.get_last()
-        return AnnotationValueRef("fixed", value=obj)
+
+        return interfaces.annotations.FixedDataSourceInterface(value=obj)
 
 
 def annotation_to_dict(annotation: interfaces.annotations.AnnotationInterface,
@@ -91,9 +89,8 @@ def annotation_to_dict(annotation: interfaces.annotations.AnnotationInterface,
         result = {}
         for key, value in dictionary.items():
             keyspec = context.describe_coordinate(key)
-            valuespec = context.describe_value(value).spec
-            result[keyspec] = valuespec
-            print(keyspec, valuespec)
+            value = context.describe_value(value)
+            result[keyspec] = value
         return result
 
     spec = dataclasses.asdict(annotation)
@@ -354,12 +351,13 @@ class OnlineFit(DefaultAnalysis):
             analysis_identifier = "fit_" + self.fit_type + "_" + "_".join(channels)
 
         def analysis_ref(key):
-            return AnnotationValueRef("online_result",
-                                      analysis_name=analysis_identifier,
-                                      result_key=key)
+            return interfaces.annotations.OnlineResultDataSourceInterface(
+                analysis_name=analysis_identifier,
+                result_key=key
+            )
 
         annotations = [
-            interfaces.annotations.ComputedCurveAnnotationInteface(
+            interfaces.annotations.ComputedCurveAnnotationInterface(
                 function_name=self.fit_type,
                 associated_channels=channels,
                 data={
@@ -372,7 +370,7 @@ class OnlineFit(DefaultAnalysis):
             # TODO: Change API to allow more general annotations.
             if set(a.keys()) == set("x"):
                 annotations.append(
-                    interfaces.annotations.LocationAnnotationInteface(
+                    interfaces.annotations.LocationAnnotationInterface(
                         coordinates={self.data["x"]: analysis_ref(a["x"])},
                         data={
                             context.describe_coordinate(self.data["x"]) + "_error":

@@ -1,6 +1,6 @@
 import enum
 import dataclasses
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 from . import common
 
 class ParamType(enum.Enum):

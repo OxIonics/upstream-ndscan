@@ -3,6 +3,7 @@
 This includes, for instance, fit curves and lines indicating fit results.
 """
 
+# INTERFACES TODO: rename to annotations?
 import logging
 import numpy
 from oitg import uncertainty_to_string
@@ -56,6 +57,7 @@ class ComputedCurveItem(AnnotationItem):
                                                     rateLimit=30)
 
         for source in self._data_sources.values():
+            print("SOURCE", source)
             source.changed.connect(self.redraw_limiter.signalReceived)
 
         self.redraw_limiter.signalReceived()

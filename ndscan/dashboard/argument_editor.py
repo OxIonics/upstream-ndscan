@@ -588,6 +588,7 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
         is_scannable = (self.scan_options is not None) and param.is_scannable
 
         options = OrderedDict([])
+        # TODO: AFAICT this is the only
         if isinstance(param, interfaces.parameters.StringParamInterface):
             options["Fixed"] = StringFixedScanOption
         else:
