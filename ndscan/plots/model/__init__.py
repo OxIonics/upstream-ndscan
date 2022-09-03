@@ -25,6 +25,8 @@ situations.)
 
 import logging
 import numpy
+import importlib
+import inspect
 from qasync import QtCore
 from typing import Any, Callable, Dict, List, Optional
 from .online_analysis import OnlineNamedFitAnalysis
@@ -164,6 +166,24 @@ class SinglePointModel(Model):
         raise NotImplementedError
 
 
+def import_class(module_name: str, class_name: str):
+    """
+    Imports a named class from a module in the python path or raises an exception.
+    """
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        raise ValueError(f'Cannot import module "{module_name}"')
+
+    module_classes = [
+        name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)
+    ]
+    if class_name not in module_classes:
+        raise ValueError(f'Class "{class_name}" not in module "{module_name}"')
+
+    return getattr(module, class_name)
+
+
 class ScanModel(Model):
     points_rewritten = QtCore.pyqtSignal(dict)
     points_appended = QtCore.pyqtSignal(dict)
@@ -251,6 +271,11 @@ class ScanModel(Model):
             kind = schema["kind"]
             if kind == "named_fit":
                 self._online_analyses[name] = OnlineNamedFitAnalysis(schema, self)
+            elif kind == "custom":
+                module_name = schema["module_name"]
+                module_class = schema["module_class"]
+                cls = import_class(module_name, module_class)
+                self._online_analyses[name] = cls(schema, self)
             else:
                 logger.warning("Ignoring unsupported online analysis type: '%s'", kind)
 
