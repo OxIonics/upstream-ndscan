@@ -30,6 +30,8 @@ import inspect
 from qasync import QtCore
 from typing import Any, Callable, Dict, List, Optional
 from .online_analysis import OnlineNamedFitAnalysis
+from ..utils import import_class
+
 
 logger = logging.getLogger(__name__)
 
@@ -165,23 +167,6 @@ class SinglePointModel(Model):
     def get_point(self) -> Optional[Dict[str, Any]]:
         raise NotImplementedError
 
-
-def import_class(module_name: str, class_name: str):
-    """
-    Imports a named class from a module in the python path or raises an exception.
-    """
-    try:
-        module = importlib.import_module(module_name)
-    except ImportError:
-        raise ValueError(f'Cannot import module "{module_name}"')
-
-    module_classes = [
-        name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)
-    ]
-    if class_name not in module_classes:
-        raise ValueError(f'Class "{class_name}" not in module "{module_name}"')
-
-    return getattr(module, class_name)
 
 
 class ScanModel(Model):

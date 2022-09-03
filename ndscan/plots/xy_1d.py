@@ -11,7 +11,7 @@ from .model.subscan import create_subscan_roots
 from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
-                    FIT_COLORS, SERIES_COLORS)
+                    FIT_COLORS, SERIES_COLORS, import_class)
 
 logger = logging.getLogger(__name__)
 
@@ -259,6 +259,12 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
                     item = ComputedCurveItem(function_name, a.data, vb, curve, x_limits)
                     self.annotation_items.append(item)
                     continue
+
+            if a.kind == "custom":
+                module_name = a["module_name"]
+                module_class = a["module_class"]
+                cls = import_class(module_name, module_class)
+                self.annotation_items.append(cls(self, a))
 
             logger.info("Ignoring annotation of kind '%s' with coordinates %s", a.kind,
                         list(a.coordinates.keys()))
