@@ -7,18 +7,15 @@
 # but to hang our heads in shame and manually instantiate the parameter handling
 # machinery for all supported value types, in particular to handle cases where e.g.
 # both an int and a float parameter is scanned at the same time.
-
+import dataclasses
 from artiq.language import *
 from artiq.language import units
 from typing import Any, Dict, Optional, Tuple, Type, Union
 from ..utils import eval_param_default, GetDataset
+from .. import interfaces
+
 
 __all__ = ["FloatParam", "IntParam", "StringParam"]
-
-
-def type_string_to_param(name: str):
-    """Resolve a param schema type string to the corresponding Param implementation."""
-    return {"float": FloatParam, "int": IntParam, "string": StringParam}[name]
 
 
 class InvalidDefaultError(ValueError):
@@ -217,56 +214,45 @@ def resolve_numeric_scale(scale: Optional[float], unit: str) -> float:
         raise KeyError("Unit '{}' is unknown, you must specify "
                        "the scale manually".format(unit))
 
+# TODO:
+# Do we want ParamInterfaces to be extensible through custom parameters? A requirement
+# here is that there is no direct access to members of `ParamInterface` subtypes which
+# are not common to all subtypes (to think about: is there a good way of enforcing this
+# commonality through a shared parent class? I've tried to avoid multiple inheritance
+# of dataclasses) the codebase -- everything should be done through common member
+# functions. Need to check to what extend this is already the case / think about whether
+# this is something we could / should do
+# The only place I'm currently aware of where this is not already the case is the
+# argument editor, which special cases string parameters. AFAICT what is really being
+# tested there is whether the parameter is a numeric type which we can scan or something
+# else (e.g. if we add enum/bool types in the future). This can probably be better done
+# by adding a dtype attribute and checking whether that is numeric...
 
-class FloatParam:
-    HandleType = FloatParamHandle
-    StoreType = FloatParamStore
+class Param(interfaces.parameters.ParamInterface):
+    # Should the param instances inherit from this? How would we handle this? At present
+    # this is not used anywhere, just me noting down what the common interface is for
+    # my own reference
+    # The only bits that aren't common are the min/max/unit/scale
+    HandleType: ParamHandle
+    StoreType: ParamStore
+    CompilerType: Any  # what should this be?
+    # store the python type here as an attribute? Cleaner way of doing type annotations?
+
+    def eval_default(self, get_dataset: GetDataset) -> Any:
+        raise NotImplementedError
+
+    def make_store(self, identity: Tuple[str, str], value: Any) -> ParamStore:
+        raise NotImplementedError
+
+class FloatParam(interfaces.parameters.FloatParamInterface):
+    HandleType: ParamHandle = FloatParamHandle
+    StoreType: ParamStore = FloatParamStore
     CompilerType = TFloat
 
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: Union[str, float],
-                 *,
-                 min: Optional[float] = None,
-                 max: Optional[float] = None,
-                 unit: str = "",
-                 scale: Optional[float] = None,
-                 step: Optional[float] = None,
-                 is_scannable: bool = True):
-
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.min = min
-        self.max = max
-
-        self.unit = unit
-        self.scale = resolve_numeric_scale(scale, unit)
-
-        self.step = step if step is not None else self.scale / 10.0
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        spec = {
-            "is_scannable": self.is_scannable,
-            "scale": self.scale,
-            "step": self.step
-        }
-        if self.min is not None:
-            spec["min"] = self.min
-        if self.max is not None:
-            spec["max"] = self.max
-        if self.unit:
-            spec["unit"] = self.unit
-
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "float",
-            "default": str(self.default),
-            "spec": spec,
-        }
+    def __post_init__(self):
+        super().__post_init__()
+        self.scale = resolve_numeric_scale(self.scale, self.unit)
+        self.step = self.step if self.step is not None else self.scale / 10.0
 
     def eval_default(self, get_dataset: GetDataset) -> float:
         if type(self.default) is str:
@@ -283,50 +269,17 @@ class FloatParam:
         return FloatParamStore(identity, value)
 
 
-class IntParam:
-    HandleType = IntParamHandle
-    StoreType = IntParamStore
+# @dataclasses.dataclass
+class IntParam(interfaces.parameters.IntParamInterface):
+    HandleType: ParamHandle = IntParamHandle
+    StoreType: ParamStore = IntParamStore
     CompilerType = TInt32
 
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: Union[str, int],
-                 *,
-                 min: Optional[int] = 0,
-                 max: Optional[int] = None,
-                 unit: str = "",
-                 scale: Optional[int] = None,
-                 is_scannable: bool = True):
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.min = min
-        self.max = max
-
-        self.unit = unit
-        self.scale = resolve_numeric_scale(scale, unit)
+    def __post_init__(self):
+        self.scale = resolve_numeric_scale(self.scale, self.unit)
         if self.scale != 1:
             raise NotImplementedError(
                 "Non-unity scales not implemented for integer parameters")
-
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        spec = {"is_scannable": self.is_scannable, "scale": self.scale}
-        if self.min is not None:
-            spec["min"] = self.min
-        if self.max is not None:
-            spec["max"] = self.max
-        if self.unit:
-            spec["unit"] = self.unit
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "int",
-            "default": str(self.default),
-            "spec": spec
-        }
 
     def eval_default(self, get_dataset: GetDataset) -> int:
         if type(self.default) is str:
@@ -342,32 +295,11 @@ class IntParam:
                 value, self.max))
         return IntParamStore(identity, value)
 
-
-class StringParam:
+# @dataclasses.dataclass
+class StringParam(interfaces.parameters.StringParamInterface):
     HandleType = StringParamHandle
     StoreType = StringParamStore
     CompilerType = TStr
-
-    def __init__(self,
-                 fqn: str,
-                 description: str,
-                 default: str,
-                 is_scannable: bool = True):
-        self.fqn = fqn
-        self.description = description
-        self.default = default
-        self.is_scannable = is_scannable
-
-    def describe(self) -> Dict[str, Any]:
-        return {
-            "fqn": self.fqn,
-            "description": self.description,
-            "type": "string",
-            "default": str(self.default),
-            "spec": {
-                "is_scannable": self.is_scannable
-            }
-        }
 
     def eval_default(self, get_dataset: GetDataset) -> str:
         return eval_param_default(self.default, get_dataset)

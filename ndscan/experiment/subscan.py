@@ -219,7 +219,7 @@ def setattr_subscan(owner: Fragment,
         handle = getattr(param_owner, name)
         param, store = param_owner.override_param(name)
 
-        axes[handle] = ScanAxis(param.describe(), "/".join(param_owner._fragment_path),
+        axes[handle] = ScanAxis(param.encode(), "/".join(param_owner._fragment_path),
                                 store)
 
         # We simply generate sequential result channels to be sure we have enough.

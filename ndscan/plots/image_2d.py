@@ -1,4 +1,5 @@
 """Pseudocolor 2D plot for equidistant data."""
+# INTERFACES TODO (parameters)
 
 from itertools import chain, repeat
 import logging

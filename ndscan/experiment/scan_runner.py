@@ -13,10 +13,11 @@ from itertools import islice
 from typing import Any, Dict, List, Iterable, Iterator, Tuple
 from .default_analysis import AnnotationContext, DefaultAnalysis
 from .fragment import ExpFragment, TransitoryError, RestartKernelTransitoryError
-from .parameters import ParamStore, type_string_to_param
+from .parameters import ParamStore
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
 from .utils import is_kernel
+from .. import interfaces
 
 __all__ = [
     "ScanAxis", "ScanSpec", "ScanRunner", "filter_default_analyses", "describe_scan",
@@ -31,9 +32,9 @@ class ScanAxis:
     scan at runtime; i.e. the :class:`.ParamStore` to modify in order to set the
     parameter.
     """
-    def __init__(self, param_schema: Dict[str, Any], path: str,
+    def __init__(self, param: interfaces.parameters.ParamInterface, path: str,
                  param_store: ParamStore):
-        self.param_schema = param_schema
+        self.param = param
         self.path = path
         self.param_store = param_store
 
@@ -158,7 +159,7 @@ class ScanRunner(HasEnvironment):
         self._kscan_param_values_chunk.__func__.__annotations__ = {
             "return":
             TTuple([
-                TList(type_string_to_param(a.param_schema["type"]).CompilerType)
+                TList(a.param.CompilerType)
                 for a in axes
             ])
         }
@@ -379,7 +380,7 @@ def describe_scan(spec: ScanSpec, fragment: ExpFragment,
 
     desc["fragment_fqn"] = fragment.fqn
     axis_specs = [{
-        "param": ax.param_schema,
+        "param": ax.param.encode(),
         "path": ax.path,
     } for ax in spec.axes]
     for ax, gen in zip(axis_specs, spec.generators):
