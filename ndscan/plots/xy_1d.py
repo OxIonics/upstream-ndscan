@@ -199,19 +199,21 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             item.remove()
         self.annotation_items.clear()
 
+
+    def channel_ref_to_series_idx(self, ref):
+        for i, s in enumerate(self.series):
+            if "channel_" + s.data_name == ref:
+                return i
+        return 0
+
+    @staticmethod
+    def make_curve_item(series_idx):
+        color = FIT_COLORS[series_idx % len(FIT_COLORS)]
+        pen = pyqtgraph.mkPen(color, width=3)
+        return pyqtgraph.PlotCurveItem(pen=pen)
+
     def _update_annotations(self):
         self._clear_annotations()
-
-        def channel_ref_to_series_idx(ref):
-            for i, s in enumerate(self.series):
-                if "channel_" + s.data_name == ref:
-                    return i
-            return 0
-
-        def make_curve_item(series_idx):
-            color = FIT_COLORS[series_idx % len(FIT_COLORS)]
-            pen = pyqtgraph.mkPen(color, width=3)
-            return pyqtgraph.PlotCurveItem(pen=pen)
 
         annotations = self.model.get_annotations()
         for a in annotations:
@@ -261,8 +263,8 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
                     continue
 
             if a.kind == "custom":
-                module_name = a["module_name"]
-                module_class = a["module_class"]
+                module_name = a.parameters["module_name"]
+                module_class = a.parameters["module_class"]
                 cls = import_class(module_name, module_class)
                 self.annotation_items.append(cls(self, a))
 
