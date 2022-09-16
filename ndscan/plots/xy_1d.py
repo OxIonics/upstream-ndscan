@@ -199,7 +199,6 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             item.remove()
         self.annotation_items.clear()
 
-
     def channel_ref_to_series_idx(self, ref):
         for i, s in enumerate(self.series):
             if "channel_" + s.data_name == ref:

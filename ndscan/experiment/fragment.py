@@ -63,9 +63,10 @@ class Fragment(HasEnvironment):
         klass = self.__class__
         mod = klass.__module__
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("build_fragment", attributes={
-            "class_name": klass.__qualname__,
-        }):
+        with tracer.start_as_current_span("build_fragment",
+                                          attributes={
+                                              "class_name": klass.__qualname__,
+                                          }):
             # KLUDGE: Strip prefix added by file_import() to make path matches compatible
             # across dashboard/artiq_run and the worker running the experiment. Should be
             # fixed at the source.
@@ -86,10 +87,11 @@ class Fragment(HasEnvironment):
 
             # Now that we know all subfragments, synthesise code for device_setup() and
             # device_cleanup() to forward to subfragments.
-            self._device_setup_subfragments_impl = kernel_from_string(["self"], "\n".join([
-                "self.{}.device_setup()".format(s._fragment_path[-1])
-                for s in self._subfragments if s not in self._detached_subfragments
-            ]) or "pass", portable)
+            self._device_setup_subfragments_impl = kernel_from_string(
+                ["self"], "\n".join([
+                    "self.{}.device_setup()".format(s._fragment_path[-1])
+                    for s in self._subfragments if s not in self._detached_subfragments
+                ]) or "pass", portable)
 
             code = ""
             for s in self._subfragments[::-1]:

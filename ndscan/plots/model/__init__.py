@@ -32,7 +32,6 @@ from typing import Any, Callable, Dict, List, Optional
 from .online_analysis import OnlineNamedFitAnalysis
 from ..utils import import_class
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -166,7 +165,6 @@ class SinglePointModel(Model):
 
     def get_point(self) -> Optional[Dict[str, Any]]:
         raise NotImplementedError
-
 
 
 class ScanModel(Model):
