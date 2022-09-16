@@ -114,7 +114,8 @@ class ScanRunner(HasEnvironment):
                                     axis_values = next(points, None)
                                     if axis_values is None:
                                         return
-                                    for (axis, value, sink) in zip(axes, axis_values, axis_sinks):
+                                    for (axis, value,
+                                         sink) in zip(axes, axis_values, axis_sinks):
                                         axis.param_store.set_value(value)
                                         sink.push(value)
                                     fragment.device_setup()

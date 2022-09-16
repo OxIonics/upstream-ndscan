@@ -25,6 +25,7 @@ opentelemetry-api = "^1.11.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
+yapf = "^0.32.0"
 
 [tool.poetry.scripts]
 ndscan_show = "ndscan.show:main"
@@ -40,3 +41,9 @@ pattern = "^(?P<base>\\d+(\\.\\d+)*)"
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+fmt = "yapf -i -r examples ndscan test"
+fmt-test = "yapf -d -r examples ndscan test"
+flake = "flake8 examples ndscan test"
+test = "python -m unittest discover -v test"

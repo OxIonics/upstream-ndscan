@@ -1,3 +1,5 @@
+import importlib
+import inspect
 import html
 import logging
 from typing import Any, Dict, List, Tuple
@@ -235,3 +237,20 @@ def setup_axis_item(axis_item, axes: List[Tuple[str, str, str, Dict[str, Any]]])
     axis_item.setScale(data_to_display_scale)
     axis_item.autoSIPrefix = False
     return unit_suffix, data_to_display_scale
+
+
+def import_class(module_name: str, class_name: str):
+    """
+    Imports a named class from a module in the python path or raises an exception.
+    """
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        raise ValueError(f'Cannot import module "{module_name}"')
+
+    try:
+        kls = getattr(module, class_name)
+    except AttributeError as ex:
+        raise ValueError(f'Class "{class_name}" not in module "{module_name}"') from ex
+
+    return kls

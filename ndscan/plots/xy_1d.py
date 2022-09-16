@@ -11,7 +11,7 @@ from .model.subscan import create_subscan_roots
 from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
-                    FIT_COLORS, SERIES_COLORS)
+                    FIT_COLORS, SERIES_COLORS, import_class)
 
 logger = logging.getLogger(__name__)
 
@@ -199,19 +199,20 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             item.remove()
         self.annotation_items.clear()
 
+    def channel_ref_to_series_idx(self, ref):
+        for i, s in enumerate(self.series):
+            if "channel_" + s.data_name == ref:
+                return i
+        return 0
+
+    @staticmethod
+    def make_curve_item(series_idx):
+        color = FIT_COLORS[series_idx % len(FIT_COLORS)]
+        pen = pyqtgraph.mkPen(color, width=3)
+        return pyqtgraph.PlotCurveItem(pen=pen)
+
     def _update_annotations(self):
         self._clear_annotations()
-
-        def channel_ref_to_series_idx(ref):
-            for i, s in enumerate(self.series):
-                if "channel_" + s.data_name == ref:
-                    return i
-            return 0
-
-        def make_curve_item(series_idx):
-            color = FIT_COLORS[series_idx % len(FIT_COLORS)]
-            pen = pyqtgraph.mkPen(color, width=3)
-            return pyqtgraph.PlotCurveItem(pen=pen)
 
         annotations = self.model.get_annotations()
         for a in annotations:
@@ -259,6 +260,12 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
                     item = ComputedCurveItem(function_name, a.data, vb, curve, x_limits)
                     self.annotation_items.append(item)
                     continue
+
+            if a.kind == "custom":
+                module_name = a.parameters["module_name"]
+                module_class = a.parameters["module_class"]
+                cls = import_class(module_name, module_class)
+                self.annotation_items.append(cls(self, a))
 
             logger.info("Ignoring annotation of kind '%s' with coordinates %s", a.kind,
                         list(a.coordinates.keys()))
