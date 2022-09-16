@@ -248,10 +248,9 @@ def import_class(module_name: str, class_name: str):
     except ImportError:
         raise ValueError(f'Cannot import module "{module_name}"')
 
-    module_classes = [
-        name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)
-    ]
-    if class_name not in module_classes:
-        raise ValueError(f'Class "{class_name}" not in module "{module_name}"')
+    try:
+        kls = getattr(module, class_name)
+    except AttributeError as ex:
+        raise ValueError(f'Class "{class_name}" not in module "{module_name}"') from ex
 
-    return getattr(module, class_name)
+    return kls
