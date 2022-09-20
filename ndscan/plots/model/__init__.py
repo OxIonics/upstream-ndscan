@@ -25,8 +25,6 @@ situations.)
 
 import logging
 import numpy
-import importlib
-import inspect
 from qasync import QtCore
 from typing import Any, Callable, Dict, List, Optional
 from .online_analysis import OnlineNamedFitAnalysis

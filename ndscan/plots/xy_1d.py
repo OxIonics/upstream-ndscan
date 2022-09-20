@@ -219,7 +219,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             if a.kind == "location":
                 if set(a.coordinates.keys()) == set(["axis_0"]):
                     associated_series_idx = max(
-                        channel_ref_to_series_idx(chan)
+                        self.channel_ref_to_series_idx(chan)
                         for chan in a.parameters.get("associated_channels", [None]))
 
                     color = FIT_COLORS[associated_series_idx % len(FIT_COLORS)]
@@ -238,7 +238,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
                         associated_series_idx = series_idx
                         break
                 if associated_series_idx is not None:
-                    curve = make_curve_item(associated_series_idx)
+                    curve = self.make_curve_item(associated_series_idx)
                     series = self.series[associated_series_idx]
                     vb = series.view_box
                     item = CurveItem(a.coordinates["axis_0"],
@@ -251,11 +251,11 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
                 function_name = a.parameters.get("function_name", None)
                 if ComputedCurveItem.is_function_supported(function_name):
                     associated_series_idx = max(
-                        channel_ref_to_series_idx(chan)
+                        self.channel_ref_to_series_idx(chan)
                         for chan in a.parameters.get("associated_channels", [None]))
 
                     x_limits = [self.x_param_spec.get(n, None) for n in ("min", "max")]
-                    curve = make_curve_item(associated_series_idx)
+                    curve = self.make_curve_item(associated_series_idx)
                     vb = self.series[associated_series_idx].view_box
                     item = ComputedCurveItem(function_name, a.data, vb, curve, x_limits)
                     self.annotation_items.append(item)
