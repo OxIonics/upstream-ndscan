@@ -1,6 +1,6 @@
 [[package]]
 name = "artiq"
-version = "7.8543+g88205999.fwd903e55"
+version = "7.8545+gbb29dc92.fwd903e55"
 description = "Advanced Real-Time Infrastructure for Quantum physics"
 category = "main"
 optional = false
@@ -667,7 +667,7 @@ content-hash = "c2f7c0266f3ce2668a4d278d0ad21daeb5065d1259de199e58512e0aae5e9bfd
 
 [metadata.files]
 artiq = [
-    {file = "artiq-7.8543+g88205999.fwd903e55-py3-none-any.whl", hash = "sha256:fa72ec4424d2f242d24a2080b97a68d615f16aa5496251eb840f7ee43bbc0fc8"},
+    {file = "artiq-7.8545+gbb29dc92.fwd903e55-py3-none-any.whl", hash = "sha256:45f808192a52d2cad1eae9be481c74d630e8fd4689a2daa76a063e3f6ba1ebe0"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.1.tar.gz", hash = "sha256:81b2c9071a49367a7f770170e5eec8cb66567cfbbc8c73d20ce5ca4a8d71cf11"},
