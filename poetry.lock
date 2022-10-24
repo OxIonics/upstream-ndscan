@@ -1,6 +1,6 @@
 [[package]]
 name = "artiq"
-version = "7.8545+gbb29dc92.fwd903e55"
+version = "7.8552+g84c8d6f4.fwd903e55"
 description = "Advanced Real-Time Infrastructure for Quantum physics"
 category = "main"
 optional = false
@@ -645,7 +645,7 @@ reference = "oxionics"
 
 [[package]]
 name = "zipp"
-version = "3.9.0"
+version = "3.10.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
@@ -667,7 +667,7 @@ content-hash = "c2f7c0266f3ce2668a4d278d0ad21daeb5065d1259de199e58512e0aae5e9bfd
 
 [metadata.files]
 artiq = [
-    {file = "artiq-7.8545+gbb29dc92.fwd903e55-py3-none-any.whl", hash = "sha256:45f808192a52d2cad1eae9be481c74d630e8fd4689a2daa76a063e3f6ba1ebe0"},
+    {file = "artiq-7.8552+g84c8d6f4.fwd903e55-py3-none-any.whl", hash = "sha256:c7771a1e1ceaa4c700120461ae1dfe1a4f3f643f004e250934deecbe9531930f"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.1.tar.gz", hash = "sha256:81b2c9071a49367a7f770170e5eec8cb66567cfbbc8c73d20ce5ca4a8d71cf11"},
@@ -1125,6 +1125,6 @@ yapf = [
     {file = "yapf-0.32.0.tar.gz", hash = "sha256:a3f5085d37ef7e3e004c4ba9f9b3e40c54ff1901cd111f05145ae313a7c67d1b"},
 ]
 zipp = [
-    {file = "zipp-3.9.0-py3-none-any.whl", hash = "sha256:972cfa31bc2fedd3fa838a51e9bc7e64b7fb725a8c00e7431554311f180e9980"},
-    {file = "zipp-3.9.0.tar.gz", hash = "sha256:3a7af91c3db40ec72dd9d154ae18e008c69efe8ca88dde4f9a731bb82fe2f9eb"},
+    {file = "zipp-3.10.0-py3-none-any.whl", hash = "sha256:4fcb6f278987a6605757302a6e40e896257570d11c51628968ccb2a47e80c6c1"},
+    {file = "zipp-3.10.0.tar.gz", hash = "sha256:7a7262fd930bd3e36c50b9a64897aec3fafff3dfdeec9623ae22b40e93f99bb8"},
 ]
