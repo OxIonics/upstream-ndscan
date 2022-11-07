@@ -198,7 +198,7 @@ reference = "oxionics"
 
 [[package]]
 name = "opentelemetry-api"
-version = "1.13.0"
+version = "1.14.0"
 description = "OpenTelemetry Python API"
 category = "main"
 optional = false
@@ -771,8 +771,8 @@ oitg = [
     {file = "oitg-0.2.98+g39ca6b0-py3-none-any.whl", hash = "sha256:2919bcdb1facd5fc00b76f0495dde52ba5a7150256bed9a4926fffa583bae5bc"},
 ]
 opentelemetry-api = [
-    {file = "opentelemetry_api-1.13.0-py3-none-any.whl", hash = "sha256:2db1e8713f48a119bae457cd22304a7919d5e57190a380485c442c4f731a46dd"},
-    {file = "opentelemetry_api-1.13.0.tar.gz", hash = "sha256:e683e869471b99e77238c8739d6ee2f368803329f3b808dfa86a02d0b519c682"},
+    {file = "opentelemetry_api-1.14.0-py3-none-any.whl", hash = "sha256:d98107f65a815b7d3bc90b79abd6460fefe7b9ccb9c6958e2e37129e360a811a"},
+    {file = "opentelemetry_api-1.14.0.tar.gz", hash = "sha256:9629d87680a765a1e3e16f8bd156d59e7ed00f4282f9df00c217d53229356fba"},
 ]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
