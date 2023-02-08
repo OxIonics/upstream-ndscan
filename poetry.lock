@@ -2,13 +2,13 @@
 
 [[package]]
 name = "artiq"
-version = "7.8578+gb7488142.fw958ca27"
+version = "7.8609+gbb6524e2.fw958ca27"
 description = "Advanced Real-Time Infrastructure for Quantum physics"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.9"
 files = [
-    {file = "artiq-7.8578+gb7488142.fw958ca27-py3-none-any.whl", hash = "sha256:cab2d77af307aae05d81a79deb438f65263f80fd324ffaf4f1f51de4c8707f75"},
+    {file = "artiq-7.8609+gbb6524e2.fw958ca27-py3-none-any.whl", hash = "sha256:9445144fbbc34eea13ec7f553a6fe2efbfe882f03b302eda55476ade6258dd1a"},
 ]
 
 [package.dependencies]
@@ -269,13 +269,13 @@ reference = "oxionics"
 
 [[package]]
 name = "oitg"
-version = "0.2.98+g39ca6b0"
+version = "0.2.132+g085ecef"
 description = "Oxford Ion-Trap Group routines"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.11"
 files = [
-    {file = "oitg-0.2.98+g39ca6b0-py3-none-any.whl", hash = "sha256:2919bcdb1facd5fc00b76f0495dde52ba5a7150256bed9a4926fffa583bae5bc"},
+    {file = "oitg-0.2.132+g085ecef-py3-none-any.whl", hash = "sha256:db348a8427f5e2bb33b85aa74ea4109a5d76533a0f70c484cb560cf39c23432a"},
 ]
 
 [package.dependencies]
@@ -946,13 +946,13 @@ reference = "oxionics"
 
 [[package]]
 name = "sipyco"
-version = "1.4.55+g7ce1bbf"
+version = "1.4.67+ga2a8ea5"
 description = "library for writing networked Python programs"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sipyco-1.4.55+g7ce1bbf-py3-none-any.whl", hash = "sha256:c07318b7b65db4cc8fed59c4a1e5dabbf2cdc5feccd2cee7bd10c14d4881ff66"},
+    {file = "sipyco-1.4.67+ga2a8ea5-py3-none-any.whl", hash = "sha256:0127cb7b96dabcf1ef439a23040dadb3cbe1dd15ceb573ed2219822722e4594a"},
 ]
 
 [package.dependencies]
