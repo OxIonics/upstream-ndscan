@@ -2,13 +2,13 @@
 
 [[package]]
 name = "artiq"
-version = "7.8578+gb7488142.fw958ca27"
+version = "7.8609+gbb6524e2.fw958ca27"
 description = "Advanced Real-Time Infrastructure for Quantum physics"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.9"
 files = [
-    {file = "artiq-7.8578+gb7488142.fw958ca27-py3-none-any.whl", hash = "sha256:cab2d77af307aae05d81a79deb438f65263f80fd324ffaf4f1f51de4c8707f75"},
+    {file = "artiq-7.8609+gbb6524e2.fw958ca27-py3-none-any.whl", hash = "sha256:9445144fbbc34eea13ec7f553a6fe2efbfe882f03b302eda55476ade6258dd1a"},
 ]
 
 [package.dependencies]
