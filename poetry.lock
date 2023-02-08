@@ -946,13 +946,13 @@ reference = "oxionics"
 
 [[package]]
 name = "sipyco"
-version = "1.4.55+g7ce1bbf"
+version = "1.4.67+ga2a8ea5"
 description = "library for writing networked Python programs"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sipyco-1.4.55+g7ce1bbf-py3-none-any.whl", hash = "sha256:c07318b7b65db4cc8fed59c4a1e5dabbf2cdc5feccd2cee7bd10c14d4881ff66"},
+    {file = "sipyco-1.4.67+ga2a8ea5-py3-none-any.whl", hash = "sha256:0127cb7b96dabcf1ef439a23040dadb3cbe1dd15ceb573ed2219822722e4594a"},
 ]
 
 [package.dependencies]
