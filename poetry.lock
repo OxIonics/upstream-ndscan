@@ -269,13 +269,13 @@ reference = "oxionics"
 
 [[package]]
 name = "oitg"
-version = "0.2.98+g39ca6b0"
+version = "0.2.132+g085ecef"
 description = "Oxford Ion-Trap Group routines"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.11"
 files = [
-    {file = "oitg-0.2.98+g39ca6b0-py3-none-any.whl", hash = "sha256:2919bcdb1facd5fc00b76f0495dde52ba5a7150256bed9a4926fffa583bae5bc"},
+    {file = "oitg-0.2.132+g085ecef-py3-none-any.whl", hash = "sha256:db348a8427f5e2bb33b85aa74ea4109a5d76533a0f70c484cb560cf39c23432a"},
 ]
 
 [package.dependencies]
