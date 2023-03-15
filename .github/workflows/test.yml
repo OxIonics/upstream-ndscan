@@ -12,3 +12,5 @@ jobs:
     uses: OxIonics/common-workflows/.github/workflows/test_flake_yapf.yml@master
     secrets:
       GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
+    with:
+      PACKAGE_NAME: 'examples ndscan test'
