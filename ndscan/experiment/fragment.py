@@ -67,9 +67,9 @@ class Fragment(HasEnvironment):
                                           attributes={
                                               "class_name": klass.__qualname__,
                                           }):
-            # KLUDGE: Strip prefix added by file_import() to make path matches compatible
-            # across dashboard/artiq_run and the worker running the experiment. Should be
-            # fixed at the source.
+            # KLUDGE: Strip prefix added by file_import() to make path matches
+            # compatible across dashboard/artiq_run and the worker running the
+            # experiment. Should be fixed at the source.
             for f in ["artiq_run_", "artiq_worker_", "file_import_"]:
                 mod = strip_prefix(mod, f)
             self.fqn = mod + "." + klass.__qualname__

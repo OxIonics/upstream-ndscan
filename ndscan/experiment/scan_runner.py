@@ -126,12 +126,13 @@ class ScanRunner(HasEnvironment):
                             fragment.device_cleanup()
                     finally:
                         fragment.host_cleanup()
-                # Host-only scans don't necessarily make a connection to the core device,
-                # but we close any connection that was made here anyway in case the user
-                # forgot to do so elsewhere. Otherwise, the connection might fail after the
-                # pause. artiq.sim.devices.Core and other dummy core devices that could very
-                # reasonably be used with a host-only scan don't have a close() method,
-                # though, so check for its existence first.
+                # Host-only scans don't necessarily make a connection to the core
+                # device, but we close any connection that was made here anyway in
+                # case the user forgot to do so elsewhere. Otherwise, the connection
+                # might fail after the pause. artiq.sim.devices.Core and other dummy
+                # core devices that could very reasonably be used with a host-only
+                # scan don't have a close() method, though, so check for its existence
+                # first.
                 if hasattr(self.core, "close"):
                     self.core.close()
                 self.scheduler.pause()
@@ -142,8 +143,9 @@ class ScanRunner(HasEnvironment):
                                  axis_sinks: List[ResultSink]) -> None:
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("scan_on_core"):
-            # Stash away _ragment in member variable to pacify ARTIQ compiler; there is no
-            # reason this shouldn't just be passed along and materialised as a global.
+            # Stash away _ragment in member variable to pacify ARTIQ compiler; there
+            # is no reason this shouldn't just be passed along and materialised as a
+            # global.
             self._kscan_fragment = fragment
 
             # Set up members to be accessed from the kernel through the
@@ -156,15 +158,16 @@ class ScanRunner(HasEnvironment):
             # complete so we can resume from interruptions.
             self._kscan_current_chunk = []
 
-            # Interval between scheduler.check_pause() calls on the core device (or rather,
-            # the minimum interval; calls are only made after a point has been completed).
+            # Interval between scheduler.check_pause() calls on the core device
+            # (or rather, the minimum interval; calls are only made after a point
+            # has been completed).
             self._kscan_pause_check_interval_mu = self.core.seconds_to_mu(0.2)
             self._kscan_last_pause_check_mu = np.int64(0)
 
-            # _kscan_param_values_chunk returns a tuple of lists of values, one for each
-            # scan axis. Synthesize a return type annotation (`def foo(self): -> …`) with
-            # the concrete type for this scan so the compiler can infer the types in
-            # run_chunk() correctly.
+            # _kscan_param_values_chunk returns a tuple of lists of values, one
+            # for each scan axis. Synthesize a return type annotation
+            # (`def foo(self): -> …`) with the concrete type for this scan so the
+            # compiler can infer the types in run_chunk() correctly.
             self._kscan_param_values_chunk.__func__.__annotations__ = {
                 "return":
                 TTuple([
@@ -173,13 +176,13 @@ class ScanRunner(HasEnvironment):
                 ])
             }
 
-            # Build kernel function that calls _kscan_param_values_chunk() and iterates over
-            # the returned values, assigning them to the respective parameter stores and
-            # calling _kscan_run_point() for each.
+            # Build kernel function that calls _kscan_param_values_chunk() and
+            # iterates over the returned values, assigning them to the respective
+            # parameter stores and calling _kscan_run_point() for each.
             #
-            # Currently, this can't be expressed as generic code, as there is no way to
-            # express indexing or deconstructing a tuple of values of inhomogeneous types
-            # without actually writing it out as an assignment from a tuple value.
+            # Currently, this can't be expressed as generic code, as there is no way
+            # to express indexing or deconstructing a tuple of values of inhomogeneous
+            # types without actually writing it out as an assignment from a tuple value.
             for i, axis in enumerate(axes):
                 setattr(self, "_kscan_param_setter_{}".format(i),
                         axis.param_store.set_value)
