@@ -9,6 +9,6 @@ on:
 
 jobs:
   test:
-    uses: OxIonics/common-workflows/.github/workflows/test.yml@master
+    uses: OxIonics/common-workflows/.github/workflows/test_flake_yapf.yml@master
     secrets:
       GHA_TOKEN: ${{ secrets.GHA_TOKEN }}
