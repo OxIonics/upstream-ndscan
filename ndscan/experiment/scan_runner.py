@@ -125,6 +125,9 @@ class ScanRunner(HasEnvironment):
                                     fragment.run_once()
                                     if self.scheduler.check_pause():
                                         break
+                        except ExperimentPauseError:
+                            logger.debug("Pause requested by experiment")
+                            break
                         finally:
                             fragment.device_cleanup()
                     finally:
