@@ -233,7 +233,7 @@ class ScanRunner(HasEnvironment):
             self._kscan_fragment.device_cleanup()
 
     @rpc(flags={"async"})
-    def _log_k_error(self, err_type: aq.TStr, num: at.TInt32, of: aq.TInt32):
+    def _log_k_error(self, err_type: TStr, num: TInt32, of: TInt32):
         logger.warning(f"{err_type} ({num} / {of})")
 
     @kernel
