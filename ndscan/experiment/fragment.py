@@ -14,7 +14,7 @@ from ..utils import strip_prefix
 
 __all__ = [
     "Fragment", "ExpFragment", "AggregateExpFragment", "TransitoryError",
-    "RestartKernelTransitoryError"
+    "RestartKernelTransitoryError", "ExperimentPauseError"
 ]
 
 logger = logging.getLogger(__name__)
@@ -850,5 +850,17 @@ class RestartKernelTransitoryError(TransitoryError):
     :meth:`.Fragment.host_setup()` to be run again, such as for cases where the
     experiments needs to yield back to the scheduler (e.g. for an ion loss event to be
     remedied by a second reloading experiment).
+    """
+    pass
+
+class ExperimentPauseError(Exception):
+    """Thrown when a (typically long-running) run_once wants to pause execution and hand
+    control back to the scan runner.
+
+    Such errors are never raised by the ndscan infrastructure itself, but can be thrown
+    from user fragment implementations. The scan runner will catch this exception and,
+    after handling any scheduler pauses, will rerun `run_once` with the same scan
+    parameters. Tracking and restoring any additional state is the responsibility of
+    the ExpFragment which throws this exception.
     """
     pass

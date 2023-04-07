@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Iterable, Iterator, Tuple
 from opentelemetry import trace
 
 from .default_analysis import AnnotationContext, DefaultAnalysis
-from .fragment import ExpFragment, TransitoryError, RestartKernelTransitoryError
+from .fragment import ExpFragment, TransitoryError, RestartKernelTransitoryError, ExperimentPauseError
 from .parameters import ParamStore, type_string_to_param
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
@@ -245,6 +245,10 @@ class ScanRunner(HasEnvironment):
                 self._kscan_fragment.device_setup()
                 self._kscan_fragment.run_once()
                 break
+            except ExperimentPauseError:
+                print("Pause requested by experiment")
+                self._kscan_retry_point()
+                return True
             except RTIOUnderflow:
                 # For the first two underflows per point, just print a warning and carry
                 # on (3 is a pretty arbitrary limit – we don't want to block forever in
