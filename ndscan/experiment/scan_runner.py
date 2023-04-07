@@ -105,6 +105,8 @@ class ScanRunner(HasEnvironment):
 
     def _run_scan_on_host(self, fragment: ExpFragment, points: Iterator[Tuple],
                           axes: List[ScanAxis], axis_sinks: List[ResultSink]) -> None:
+        scan_loop_was_paused = False
+
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("scan_on_host"):
             while True:
@@ -114,20 +116,25 @@ class ScanRunner(HasEnvironment):
                         try:
                             while True:
                                 with tracer.start_as_current_span("scan_on_host_point"):
-                                    axis_values = next(points, None)
-                                    if axis_values is None:
-                                        return
-                                    for (axis, value,
-                                         sink) in zip(axes, axis_values, axis_sinks):
-                                        axis.param_store.set_value(value)
-                                        sink.push(value)
+                                    if not scan_loop_was_paused:
+                                        axis_values = next(points, None)
+                                        if axis_values is None:
+                                            return
+                                        for (axis, value,
+                                             sink) in zip(axes, axis_values,
+                                                          axis_sinks):
+                                            axis.param_store.set_value(value)
+                                            sink.push(value)
+                                    else:
+                                        scan_loop_was_paused = False
+
                                     fragment.device_setup()
                                     fragment.run_once()
                                     if self.scheduler.check_pause():
                                         break
                         except ExperimentPauseError:
                             logger.debug("Pause requested by experiment")
-                            break
+                            scan_loop_was_paused = True
                         finally:
                             fragment.device_cleanup()
                     finally:
