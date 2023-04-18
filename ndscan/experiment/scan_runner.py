@@ -5,7 +5,7 @@ contains the implementation to actually execute one within an ARTIQ experiment. 
 will likely be used by end users via
 :class:`~ndscan.experiment.entry_point.FragmentScanExperiment` or subscans.
 """
-
+import logging
 import numpy as np
 from artiq.coredevice.exceptions import RTIOUnderflow
 from artiq.language import *
@@ -15,7 +15,8 @@ from typing import Any, Dict, List, Iterable, Iterator, Tuple
 from opentelemetry import trace
 
 from .default_analysis import AnnotationContext, DefaultAnalysis
-from .fragment import ExpFragment, TransitoryError, RestartKernelTransitoryError
+from .fragment import (ExpFragment, TransitoryError, RestartKernelTransitoryError,
+                       PauseRequest)
 from .parameters import ParamStore, type_string_to_param
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
@@ -25,6 +26,8 @@ __all__ = [
     "ScanAxis", "ScanSpec", "ScanRunner", "filter_default_analyses", "describe_scan",
     "describe_analyses"
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class ScanAxis:
@@ -102,6 +105,8 @@ class ScanRunner(HasEnvironment):
 
     def _run_scan_on_host(self, fragment: ExpFragment, points: Iterator[Tuple],
                           axes: List[ScanAxis], axis_sinks: List[ResultSink]) -> None:
+        scan_loop_was_paused = False
+
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("scan_on_host"):
             while True:
@@ -111,17 +116,25 @@ class ScanRunner(HasEnvironment):
                         try:
                             while True:
                                 with tracer.start_as_current_span("scan_on_host_point"):
-                                    axis_values = next(points, None)
-                                    if axis_values is None:
-                                        return
-                                    for (axis, value,
-                                         sink) in zip(axes, axis_values, axis_sinks):
-                                        axis.param_store.set_value(value)
-                                        sink.push(value)
+                                    if not scan_loop_was_paused:
+                                        axis_values = next(points, None)
+                                        if axis_values is None:
+                                            return
+                                        for (axis, value,
+                                             sink) in zip(axes, axis_values,
+                                                          axis_sinks):
+                                            axis.param_store.set_value(value)
+                                            sink.push(value)
+                                    else:
+                                        scan_loop_was_paused = False
+
                                     fragment.device_setup()
                                     fragment.run_once()
                                     if self.scheduler.check_pause():
                                         break
+                        except PauseRequest:
+                            logger.debug("Pause requested by experiment")
+                            scan_loop_was_paused = True
                         finally:
                             fragment.device_cleanup()
                     finally:
@@ -229,6 +242,10 @@ class ScanRunner(HasEnvironment):
         finally:
             self._kscan_fragment.device_cleanup()
 
+    @rpc(flags={"async"})
+    def _log_k_error(self, err_type: TStr, num: TInt32, of: TInt32):
+        logger.warning(f"{err_type} ({num} / {of})")
+
     @kernel
     def _kscan_run_point(self) -> TBool:
         """Execute the fragment for a single point (with the currently set parameters).
@@ -245,6 +262,10 @@ class ScanRunner(HasEnvironment):
                 self._kscan_fragment.device_setup()
                 self._kscan_fragment.run_once()
                 break
+            except PauseRequest:
+                logger.debug("Pause requested by experiment")
+                self._kscan_retry_point()
+                return True
             except RTIOUnderflow:
                 # For the first two underflows per point, just print a warning and carry
                 # on (3 is a pretty arbitrary limit – we don't want to block forever in
@@ -253,19 +274,22 @@ class ScanRunner(HasEnvironment):
                 if num_underflows >= self.max_rtio_underflow_retries:
                     raise
                 num_underflows += 1
-                print("Ignoring RTIOUnderflow (", num_underflows, "/",
-                      self.max_rtio_underflow_retries, ")")
+                self._log_k_error(err_type="Ignoring RTIOUnderflow",
+                                  num=num_underflows,
+                                  of=self.max_rtio_underflow_retries)
                 self._kscan_retry_point()
             except RestartKernelTransitoryError:
-                print("Caught transitory error, restarting kernel")
+                # logger.exception is not supported by ARTIQ
+                logger.warning("Caught transitory error, restarting kernel")
                 self._kscan_retry_point()
                 return True
             except TransitoryError:
                 if num_transitory_errors >= self.max_transitory_error_retries:
                     raise
                 num_transitory_errors += 1
-                print("Caught transitory error (", num_transitory_errors, "/",
-                      self.max_transitory_error_retries, "), retrying")
+                self._log_k_error(err_type="Caught transitory error",
+                                  num=num_transitory_errors,
+                                  of=self.max_transitory_error_retries)
                 self._kscan_retry_point()
         self._kscan_point_completed()
         return False
