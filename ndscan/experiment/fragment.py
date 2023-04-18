@@ -863,5 +863,9 @@ class ExperimentPauseError(Exception):
     after handling any scheduler pauses, will rerun `run_once` with the same scan
     parameters. Tracking and restoring any additional state is the responsibility of
     the ExpFragment which throws this exception.
+
+    Arguably, this would be better served by having `ExpFragment.run_once` return a
+    run completed flag, as that keeps flow control more explicit. I've gone for an
+    Exception so far as an easy way of maintaining backward compatibility.
     """
     pass
