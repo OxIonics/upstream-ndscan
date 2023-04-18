@@ -16,7 +16,7 @@ from opentelemetry import trace
 
 from .default_analysis import AnnotationContext, DefaultAnalysis
 from .fragment import (ExpFragment, TransitoryError, RestartKernelTransitoryError,
-                       ExperimentPauseError)
+                       PauseRequest)
 from .parameters import ParamStore, type_string_to_param
 from .result_channels import ResultChannel, ResultSink
 from .scan_generator import generate_points, ScanGenerator, ScanOptions
@@ -132,7 +132,7 @@ class ScanRunner(HasEnvironment):
                                     fragment.run_once()
                                     if self.scheduler.check_pause():
                                         break
-                        except ExperimentPauseError:
+                        except PauseRequest:
                             logger.debug("Pause requested by experiment")
                             scan_loop_was_paused = True
                         finally:
@@ -262,7 +262,7 @@ class ScanRunner(HasEnvironment):
                 self._kscan_fragment.device_setup()
                 self._kscan_fragment.run_once()
                 break
-            except ExperimentPauseError:
+            except PauseRequest:
                 logger.debug("Pause requested by experiment")
                 self._kscan_retry_point()
                 return True

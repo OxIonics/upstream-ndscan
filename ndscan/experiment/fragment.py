@@ -14,7 +14,7 @@ from ..utils import strip_prefix
 
 __all__ = [
     "Fragment", "ExpFragment", "AggregateExpFragment", "TransitoryError",
-    "RestartKernelTransitoryError", "ExperimentPauseError"
+    "RestartKernelTransitoryError", "PauseRequest"
 ]
 
 logger = logging.getLogger(__name__)
@@ -854,7 +854,7 @@ class RestartKernelTransitoryError(TransitoryError):
     pass
 
 
-class ExperimentPauseError(Exception):
+class PauseRequest(Exception):
     """Thrown when a (typically long-running) run_once wants to pause execution and hand
     control back to the scan runner.
 
