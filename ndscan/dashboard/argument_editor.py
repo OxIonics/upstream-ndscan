@@ -481,7 +481,7 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
 
     async def _recompute_vanilla_argument(self, name):
         try:
-            arginfo, _ = await self.manager.examine_arginfo(self.expurl)
+            arginfo, _ = await self.manager.compute_expdesc(self.expurl)
         except Exception:
             logger.error("Could not recompute argument '%s' of '%s'",
                          name,
@@ -584,6 +584,8 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
         options = OrderedDict([])
         if schema["type"] == "string":
             options["Fixed"] = StringFixedScanOption
+        elif schema["type"] == "bool":
+            options["Fixed"] = BoolFixedScanOption
         else:
             # TODO: Properly handle int, add errors (or default to PYON value).
             options["Fixed"] = FixedScanOption
@@ -726,6 +728,19 @@ class StringFixedScanOption(ScanOption):
 
     def set_value(self, value) -> None:
         self.box.setText(value)
+
+
+class BoolFixedScanOption(ScanOption):
+    def build_ui(self, layout: QtWidgets.QLayout) -> None:
+        self.box = QtWidgets.QCheckBox()
+        layout.addWidget(self.box)
+
+    def write_to_params(self, params: dict) -> None:
+        o = {"path": self.entry.path, "value": self.box.isChecked()}
+        params["overrides"].setdefault(self.entry.schema["fqn"], []).append(o)
+
+    def set_value(self, value) -> None:
+        self.box.setChecked(value)
 
 
 class NumericScanOption(ScanOption):
