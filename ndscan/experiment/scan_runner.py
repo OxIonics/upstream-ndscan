@@ -111,6 +111,10 @@ class ScanRunner(HasEnvironment):
         with tracer.start_as_current_span("scan_on_host"):
             while True:
                 with tracer.start_as_current_span("scan_on_host_uninterrupted"):
+                    # After every pause(), pull in dataset changes (immediately as well
+                    # to catch changes between the time the experiment is prepared and
+                    # when it is run, to keep the semantics uniform).
+                    fragment.recompute_param_defaults()
                     try:
                         fragment.host_setup()
                         try:
@@ -149,11 +153,11 @@ class ScanRunner(HasEnvironment):
                 if hasattr(self.core, "close"):
                     self.core.close()
                 self.scheduler.pause()
-                fragment.recompute_param_defaults()
 
     def _run_scan_on_core_device(self, fragment: ExpFragment, points: list,
                                  axes: List[ScanAxis],
                                  axis_sinks: List[ResultSink]) -> None:
+
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("scan_on_core"):
             # Stash away _ragment in member variable to pacify ARTIQ compiler; there
@@ -204,6 +208,10 @@ class ScanRunner(HasEnvironment):
             self._kscan_update_host_param_stores()
             while True:
                 with tracer.start_as_current_span("scan_on_core_uninterrupted"):
+                    # After every pause(), pull in dataset changes (immediately as well
+                    # to catch changes between the time the experiment is prepared and
+                    # when it is run, to keep the semantics uniform).
+                    self._kscan_fragment.recompute_param_defaults()
                     try:
                         self._kscan_fragment.host_setup()
                         self._kscan_run_loop(run_chunk)
@@ -214,7 +222,6 @@ class ScanRunner(HasEnvironment):
                         self._kscan_fragment.host_cleanup()
                         self.core.comm.close()
                 self.scheduler.pause()
-                self._kscan_fragment.recompute_param_defaults()
 
     def _build_kscan_run_chunk(self, num_axes):
         param_decl = " ".join("p{0},".format(idx) for idx in range(num_axes))
