@@ -582,6 +582,9 @@ class ArgumentEditor(QtWidgets.QTreeWidget):
                         and schema.get("spec", {}).get("is_scannable", True))
 
         options = OrderedDict([])
+
+        options["Default"] = DefaultScanOption
+
         if schema["type"] == "string":
             options["Fixed"] = StringFixedScanOption
         elif schema["type"] == "bool":
@@ -614,7 +617,7 @@ class OverrideEntry(LayoutWidget):
         self.widget_stack = QtWidgets.QStackedWidget()
 
         # The non-scan option should be on the top.
-        assert next(iter(option_classes.keys())) == "Fixed"
+        assert next(iter(option_classes.keys())) == "Default"
         if len(option_classes) == 1:
             self.scan_type.setEnabled(False)
         self.current_option_idx = 0
@@ -784,6 +787,17 @@ class NumericScanOption(ScanOption):
         box.setChecked(True)
         box.stateChanged.connect(self.entry.value_changed)
         return box
+
+
+class DefaultScanOption(NumericScanOption):
+    def build_ui(self, layout: QtWidgets.QLayout) -> None:
+        pass
+
+    def write_to_params(self, params: dict) -> None:
+        pass
+
+    def set_value(self, value) -> None:
+        pass
 
 
 class FixedScanOption(NumericScanOption):
